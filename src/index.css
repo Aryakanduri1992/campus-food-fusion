@@ -1,3 +1,4 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -13,16 +14,16 @@
     --popover: 0 0% 100%;
     --popover-foreground: 222.2 84% 4.9%;
 
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
+    --primary: 210 100% 15%; /* RV Navy */
+    --primary-foreground: 0 0% 98%;
 
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
+    --secondary: 0 63% 34%; /* RV Burgundy */
+    --secondary-foreground: 0 0% 98%;
 
     --muted: 210 40% 96.1%;
     --muted-foreground: 215.4 16.3% 46.9%;
 
-    --accent: 210 40% 96.1%;
+    --accent: 49 90% 66%; /* RV Gold */
     --accent-foreground: 222.2 47.4% 11.2%;
 
     --destructive: 0 84.2% 60.2%;
@@ -35,19 +36,12 @@
     --radius: 0.5rem;
 
     --sidebar-background: 0 0% 98%;
-
     --sidebar-foreground: 240 5.3% 26.1%;
-
     --sidebar-primary: 240 5.9% 10%;
-
     --sidebar-primary-foreground: 0 0% 98%;
-
     --sidebar-accent: 240 4.8% 95.9%;
-
     --sidebar-accent-foreground: 240 5.9% 10%;
-
     --sidebar-border: 220 13% 91%;
-
     --sidebar-ring: 217.2 91.2% 59.8%;
   }
 
@@ -97,5 +91,32 @@
 
   body {
     @apply bg-background text-foreground;
+  }
+}
+
+/* Custom classes for our food app */
+@layer components {
+  .food-card {
+    @apply bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow duration-300 overflow-hidden;
+  }
+  
+  .food-card-image {
+    @apply w-full h-48 object-cover;
+  }
+  
+  .category-badge {
+    @apply inline-block px-3 py-1 text-xs font-medium rounded-full;
+  }
+  
+  .veg-badge {
+    @apply bg-green-100 text-green-800;
+  }
+  
+  .non-veg-badge {
+    @apply bg-red-100 text-red-800;
+  }
+  
+  .beverage-badge {
+    @apply bg-blue-100 text-blue-800;
   }
 }

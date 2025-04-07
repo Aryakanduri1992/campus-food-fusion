@@ -1,3 +1,4 @@
+
 import type { Config } from "tailwindcss";
 
 export default {
@@ -51,6 +52,14 @@ export default {
 				card: {
 					DEFAULT: 'hsl(var(--card))',
 					foreground: 'hsl(var(--card-foreground))'
+				},
+				// RV University colors
+				rv: {
+					navy: '#0a2240',
+					burgundy: '#8b2332',
+					gold: '#f4d35e',
+					light: '#f8f8f8',
+					dark: '#333333',
 				},
 				sidebar: {
 					DEFAULT: 'hsl(var(--sidebar-background))',
