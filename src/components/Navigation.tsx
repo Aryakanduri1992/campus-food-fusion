@@ -1,16 +1,36 @@
 
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Home, ShoppingCart, ClipboardList, User } from 'lucide-react';
+import { Home, ShoppingCart, ClipboardList, User, LogOut, LogIn } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useCart } from '@/context/CartContext';
+import { useAuth } from '@/context/AuthContext';
+import { useToast } from '@/hooks/use-toast';
 
 const Navigation: React.FC = () => {
   const location = useLocation();
   const { getTotalItems } = useCart();
+  const { user, signOut } = useAuth();
+  const { toast } = useToast();
   
   const isActive = (path: string) => {
     return location.pathname === path;
+  };
+
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+      toast({
+        title: "Logged out successfully",
+        description: "You have been logged out of your account",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to log out",
+        variant: "destructive",
+      });
+    }
   };
 
   return (
@@ -47,6 +67,25 @@ const Navigation: React.FC = () => {
               <User size={20} />
               <span>My Orders</span>
             </Link>
+            
+            {user ? (
+              <Button 
+                variant="ghost" 
+                onClick={handleSignOut} 
+                className="flex items-center space-x-2 hover:text-rv-gold"
+              >
+                <LogOut size={20} />
+                <span>Logout</span>
+              </Button>
+            ) : (
+              <Link 
+                to="/auth" 
+                className={`flex items-center space-x-2 ${isActive('/auth') ? 'text-rv-gold' : 'hover:text-rv-gold'}`}
+              >
+                <LogIn size={20} />
+                <span>Login</span>
+              </Link>
+            )}
           </div>
 
           {/* Mobile Navigation - Bottom Bar */}
@@ -74,6 +113,20 @@ const Navigation: React.FC = () => {
               <User size={20} />
               <span className="text-xs">Orders</span>
             </Link>
+            {user ? (
+              <button 
+                onClick={handleSignOut}
+                className={`flex flex-col items-center`}
+              >
+                <LogOut size={20} />
+                <span className="text-xs">Logout</span>
+              </button>
+            ) : (
+              <Link to="/auth" className={`flex flex-col items-center ${isActive('/auth') ? 'text-rv-gold' : ''}`}>
+                <LogIn size={20} />
+                <span className="text-xs">Login</span>
+              </Link>
+            )}
           </div>
         </div>
       </div>
