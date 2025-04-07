@@ -1,22 +1,34 @@
+
 import React from 'react';
 import { useCart } from '@/context/CartContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Minus, Plus, Trash2, ShoppingBag } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { mockOrders } from '@/data/mockData';
 import { toast } from "sonner";
+import { useAuth } from '@/context/AuthContext';
 
 const Cart: React.FC = () => {
-  const { cart, removeFromCart, updateQuantity, clearCart, getTotalPrice } = useCart();
+  const { cart, removeFromCart, updateQuantity, clearCart, getTotalPrice, placeOrder, loading } = useCart();
+  const { user } = useAuth();
   const navigate = useNavigate();
 
-  const handlePlaceOrder = () => {
-    // In a real app, this would send the order to the backend
-    // For now, we'll just simulate a successful order
-    toast.success('Order placed successfully!');
-    clearCart();
-    navigate('/orders');
+  const handlePlaceOrder = async () => {
+    if (!user) {
+      toast.error("Please log in to place an order");
+      navigate('/auth');
+      return;
+    }
+    
+    const orderId = await placeOrder();
+    if (orderId) {
+      navigate('/payment', { 
+        state: { 
+          orderId: orderId,
+          totalAmount: getTotalPrice()
+        } 
+      });
+    }
   };
 
   if (cart.length === 0) {
@@ -49,7 +61,7 @@ const Cart: React.FC = () => {
                     <div className="flex justify-between items-start">
                       <h3 className="font-semibold">{item.foodItem.name}</h3>
                       <span className="font-bold text-rv-burgundy">
-                        ${(item.foodItem.price * item.quantity).toFixed(2)}
+                        ₹{(item.foodItem.price * item.quantity).toFixed(2)}
                       </span>
                     </div>
                     <p className="text-gray-600 text-sm">{item.foodItem.description}</p>
@@ -61,6 +73,7 @@ const Cart: React.FC = () => {
                           size="icon"
                           className="h-8 w-8 rounded-full"
                           onClick={() => updateQuantity(item.foodItem.id, item.quantity - 1)}
+                          disabled={loading}
                         >
                           <Minus className="h-4 w-4" />
                         </Button>
@@ -70,6 +83,7 @@ const Cart: React.FC = () => {
                           size="icon"
                           className="h-8 w-8 rounded-full"
                           onClick={() => updateQuantity(item.foodItem.id, item.quantity + 1)}
+                          disabled={loading}
                         >
                           <Plus className="h-4 w-4" />
                         </Button>
@@ -79,6 +93,7 @@ const Cart: React.FC = () => {
                         size="sm"
                         className="text-red-500 hover:text-white hover:bg-red-500"
                         onClick={() => removeFromCart(item.foodItem.id)}
+                        disabled={loading}
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
@@ -101,7 +116,7 @@ const Cart: React.FC = () => {
                     <span className="text-gray-600">
                       {item.quantity} x {item.foodItem.name}
                     </span>
-                    <span>${(item.foodItem.price * item.quantity).toFixed(2)}</span>
+                    <span>₹{(item.foodItem.price * item.quantity).toFixed(2)}</span>
                   </div>
                 ))}
               </div>
@@ -109,7 +124,7 @@ const Cart: React.FC = () => {
               <div className="border-t pt-4">
                 <div className="flex justify-between font-bold text-lg">
                   <span>Total</span>
-                  <span>${getTotalPrice().toFixed(2)}</span>
+                  <span>₹{getTotalPrice().toFixed(2)}</span>
                 </div>
               </div>
               
@@ -117,14 +132,16 @@ const Cart: React.FC = () => {
                 className="w-full mt-6 bg-rv-navy hover:bg-rv-burgundy"
                 size="lg"
                 onClick={handlePlaceOrder}
+                disabled={loading}
               >
-                Place Order
+                {loading ? 'Processing...' : 'Place Order'}
               </Button>
               
               <Button 
                 variant="outline" 
                 className="w-full mt-3 border-rv-navy text-rv-navy hover:bg-rv-navy hover:text-white"
                 onClick={() => navigate('/menu')}
+                disabled={loading}
               >
                 Continue Shopping
               </Button>

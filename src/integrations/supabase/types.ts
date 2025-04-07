@@ -9,6 +9,130 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      cart_items: {
+        Row: {
+          cart_id: string
+          created_at: string
+          food_image_url: string
+          food_item_id: number
+          food_name: string
+          food_price: number
+          id: string
+          quantity: number
+        }
+        Insert: {
+          cart_id: string
+          created_at?: string
+          food_image_url: string
+          food_item_id: number
+          food_name: string
+          food_price: number
+          id?: string
+          quantity?: number
+        }
+        Update: {
+          cart_id?: string
+          created_at?: string
+          food_image_url?: string
+          food_item_id?: number
+          food_name?: string
+          food_price?: number
+          id?: string
+          quantity?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cart_items_cart_id_fkey"
+            columns: ["cart_id"]
+            isOneToOne: false
+            referencedRelation: "carts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      carts: {
+        Row: {
+          created_at: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      order_items: {
+        Row: {
+          created_at: string
+          food_image_url: string
+          food_item_id: number
+          food_name: string
+          food_price: number
+          id: string
+          order_id: string
+          quantity: number
+        }
+        Insert: {
+          created_at?: string
+          food_image_url: string
+          food_item_id: number
+          food_name: string
+          food_price: number
+          id?: string
+          order_id: string
+          quantity: number
+        }
+        Update: {
+          created_at?: string
+          food_image_url?: string
+          food_item_id?: number
+          food_name?: string
+          food_price?: number
+          id?: string
+          order_id?: string
+          quantity?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_items_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      orders: {
+        Row: {
+          created_at: string
+          id: string
+          status: string
+          total_price: number
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          status?: string
+          total_price: number
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          status?: string
+          total_price?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string

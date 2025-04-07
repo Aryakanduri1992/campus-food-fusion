@@ -1,11 +1,79 @@
 
-import React from 'react';
-import { mockOrders } from '@/data/mockData';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { formatDistanceToNow } from 'date-fns';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/context/AuthContext';
+import { Order } from '@/types';
+import { ShoppingBag } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { useNavigate } from 'react-router-dom';
 
 const Orders: React.FC = () => {
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [loading, setLoading] = useState(true);
+  const { user } = useAuth();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const fetchOrders = async () => {
+      if (!user) {
+        setLoading(false);
+        return;
+      }
+
+      try {
+        // Fetch orders
+        const { data: ordersData, error: ordersError } = await supabase
+          .from('orders')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false });
+
+        if (ordersError) throw ordersError;
+
+        if (ordersData) {
+          // For each order, fetch its items
+          const ordersWithItems = await Promise.all(
+            ordersData.map(async (order) => {
+              const { data: itemsData } = await supabase
+                .from('order_items')
+                .select('*')
+                .eq('order_id', order.id);
+
+              return {
+                id: order.id,
+                status: order.status,
+                totalPrice: order.total_price,
+                timestamp: order.created_at,
+                items: (itemsData || []).map(item => ({
+                  quantity: item.quantity,
+                  foodItem: {
+                    id: item.food_item_id,
+                    name: item.food_name,
+                    price: item.food_price,
+                    imageUrl: item.food_image_url,
+                    category: 'Veg', // Default as it's not stored
+                    description: '' // Default as it's not stored
+                  }
+                }))
+              };
+            })
+          );
+
+          setOrders(ordersWithItems);
+        }
+      } catch (error) {
+        console.error('Error fetching orders:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchOrders();
+  }, [user]);
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'Placed':
@@ -24,58 +92,83 @@ const Orders: React.FC = () => {
     return formatDistanceToNow(date, { addSuffix: true });
   };
 
+  if (loading) {
+    return (
+      <div className="container mx-auto px-4 py-8 mb-16 md:mb-0 text-center">
+        <p>Loading your orders...</p>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className="container mx-auto px-4 py-12 flex flex-col items-center mb-16 md:mb-0">
+        <ShoppingBag size={64} className="text-gray-300 mb-4" />
+        <h2 className="text-2xl font-bold mb-2">Please log in to view your orders</h2>
+        <Button onClick={() => navigate('/auth')} className="mt-4">
+          Log In
+        </Button>
+      </div>
+    );
+  }
+
+  if (orders.length === 0) {
+    return (
+      <div className="container mx-auto px-4 py-12 flex flex-col items-center mb-16 md:mb-0">
+        <ShoppingBag size={64} className="text-gray-300 mb-4" />
+        <h2 className="text-2xl font-bold mb-2">You haven't placed any orders yet</h2>
+        <p className="text-gray-500 mb-6">Check out our menu and place your first order!</p>
+        <Button onClick={() => navigate('/menu')}>Browse Menu</Button>
+      </div>
+    );
+  }
+
   return (
     <div className="container mx-auto px-4 py-8 mb-16 md:mb-0">
       <h1 className="text-3xl font-bold mb-8">My Orders</h1>
       
-      {mockOrders.length === 0 ? (
-        <div className="text-center py-12">
-          <p className="text-gray-500 text-lg">You haven't placed any orders yet.</p>
-        </div>
-      ) : (
-        <div className="space-y-6">
-          {mockOrders.map((order) => (
-            <Card key={order.id}>
-              <CardHeader className="pb-2">
-                <div className="flex justify-between items-center">
-                  <CardTitle className="text-lg">Order #{order.id}</CardTitle>
-                  <Badge className={getStatusColor(order.status)}>{order.status}</Badge>
-                </div>
-                <p className="text-sm text-gray-500">
-                  {formatDate(order.timestamp)}
-                </p>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {order.items.map((item, index) => (
-                    <div key={index} className="flex justify-between items-center">
-                      <div className="flex items-center space-x-3">
-                        <img 
-                          src={item.foodItem.imageUrl} 
-                          alt={item.foodItem.name} 
-                          className="w-12 h-12 object-cover rounded"
-                        />
-                        <div>
-                          <p className="font-medium">{item.foodItem.name}</p>
-                          <p className="text-sm text-gray-500">Qty: {item.quantity}</p>
-                        </div>
+      <div className="space-y-6">
+        {orders.map((order) => (
+          <Card key={order.id}>
+            <CardHeader className="pb-2">
+              <div className="flex justify-between items-center">
+                <CardTitle className="text-lg">Order #{order.id.substring(0, 8)}</CardTitle>
+                <Badge className={getStatusColor(order.status)}>{order.status}</Badge>
+              </div>
+              <p className="text-sm text-gray-500">
+                {formatDate(order.timestamp)}
+              </p>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {order.items.map((item, index) => (
+                  <div key={index} className="flex justify-between items-center">
+                    <div className="flex items-center space-x-3">
+                      <img 
+                        src={item.foodItem.imageUrl} 
+                        alt={item.foodItem.name} 
+                        className="w-12 h-12 object-cover rounded"
+                      />
+                      <div>
+                        <p className="font-medium">{item.foodItem.name}</p>
+                        <p className="text-sm text-gray-500">Qty: {item.quantity}</p>
                       </div>
-                      <p className="font-medium">${(item.foodItem.price * item.quantity).toFixed(2)}</p>
                     </div>
-                  ))}
-                  
-                  <div className="pt-4 border-t mt-4">
-                    <div className="flex justify-between font-bold">
-                      <span>Total</span>
-                      <span>${order.totalPrice.toFixed(2)}</span>
-                    </div>
+                    <p className="font-medium">₹{(item.foodItem.price * item.quantity).toFixed(2)}</p>
+                  </div>
+                ))}
+                
+                <div className="pt-4 border-t mt-4">
+                  <div className="flex justify-between font-bold">
+                    <span>Total</span>
+                    <span>₹{order.totalPrice.toFixed(2)}</span>
                   </div>
                 </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      )}
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
     </div>
   );
 };

@@ -1,6 +1,9 @@
-import React, { createContext, useState, useContext, ReactNode } from 'react';
+
+import React, { createContext, useState, useContext, ReactNode, useEffect } from 'react';
 import { CartItem, FoodItem } from '../types';
 import { toast } from "sonner";
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/context/AuthContext';
 
 interface CartContextType {
   cart: CartItem[];
@@ -10,31 +13,148 @@ interface CartContextType {
   clearCart: () => void;
   getTotalItems: () => number;
   getTotalPrice: () => number;
+  placeOrder: () => Promise<string | null>;
+  loading: boolean;
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
 export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [cart, setCart] = useState<CartItem[]>([]);
+  const [loading, setLoading] = useState(false);
+  const { user } = useAuth();
+  const [cartId, setCartId] = useState<string | null>(null);
+  
+  // Fetch cart from database when user logs in
+  useEffect(() => {
+    const fetchCart = async () => {
+      if (!user) {
+        // Clear local cart when user logs out
+        setCart([]);
+        setCartId(null);
+        return;
+      }
+      
+      setLoading(true);
+      try {
+        // Check if user has an existing cart
+        const { data: existingCarts } = await supabase
+          .from('carts')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false })
+          .limit(1);
+          
+        let currentCartId;
+        
+        if (existingCarts && existingCarts.length > 0) {
+          // Use the existing cart
+          currentCartId = existingCarts[0].id;
+          setCartId(currentCartId);
+          
+          // Fetch cart items
+          const { data: cartItems } = await supabase
+            .from('cart_items')
+            .select('*')
+            .eq('cart_id', currentCartId);
+            
+          if (cartItems && cartItems.length > 0) {
+            // Convert database items to CartItem format
+            const formattedItems: CartItem[] = cartItems.map(item => ({
+              foodItem: {
+                id: item.food_item_id,
+                name: item.food_name,
+                price: item.food_price,
+                imageUrl: item.food_image_url,
+                category: 'Veg', // Default category as it's not stored in DB
+                description: '' // Default description as it's not stored in DB
+              },
+              quantity: item.quantity
+            }));
+            
+            setCart(formattedItems);
+          }
+        } else if (user) {
+          // Create a new cart if user is logged in
+          const { data: newCart } = await supabase
+            .from('carts')
+            .insert({ user_id: user.id })
+            .select()
+            .single();
+            
+          if (newCart) {
+            setCartId(newCart.id);
+            currentCartId = newCart.id;
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching cart:', error);
+        toast.error('Failed to load your cart');
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchCart();
+  }, [user]);
+  
+  // Sync cart changes to database
+  const syncCartToDatabase = async (updatedCart: CartItem[]) => {
+    if (!user || !cartId) return;
+    
+    setLoading(true);
+    try {
+      // Delete all existing cart items
+      await supabase
+        .from('cart_items')
+        .delete()
+        .eq('cart_id', cartId);
+        
+      // Insert new cart items
+      if (updatedCart.length > 0) {
+        const cartItemsToInsert = updatedCart.map(item => ({
+          cart_id: cartId,
+          food_item_id: item.foodItem.id,
+          food_name: item.foodItem.name,
+          food_price: item.foodItem.price,
+          food_image_url: item.foodItem.imageUrl,
+          quantity: item.quantity
+        }));
+        
+        await supabase
+          .from('cart_items')
+          .insert(cartItemsToInsert);
+      }
+    } catch (error) {
+      console.error('Error syncing cart:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const addToCart = (foodItem: FoodItem) => {
     setCart(prevCart => {
       const existingItem = prevCart.find(item => item.foodItem.id === foodItem.id);
       
+      let updatedCart;
       if (existingItem) {
         // If item already exists, increase quantity
-        const updatedCart = prevCart.map(item => 
+        updatedCart = prevCart.map(item => 
           item.foodItem.id === foodItem.id 
             ? { ...item, quantity: item.quantity + 1 } 
             : item
         );
         toast.success(`Added ${foodItem.name} to cart`);
-        return updatedCart;
       } else {
         // If item doesn't exist, add it with quantity 1
+        updatedCart = [...prevCart, { foodItem, quantity: 1 }];
         toast.success(`Added ${foodItem.name} to cart`);
-        return [...prevCart, { foodItem, quantity: 1 }];
       }
+      
+      // Sync with database if user is logged in
+      syncCartToDatabase(updatedCart);
+      
+      return updatedCart;
     });
   };
 
@@ -44,7 +164,13 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       if (itemToRemove) {
         toast.info(`Removed ${itemToRemove.foodItem.name} from cart`);
       }
-      return prevCart.filter(item => item.foodItem.id !== foodItemId);
+      
+      const updatedCart = prevCart.filter(item => item.foodItem.id !== foodItemId);
+      
+      // Sync with database if user is logged in
+      syncCartToDatabase(updatedCart);
+      
+      return updatedCart;
     });
   };
 
@@ -54,18 +180,39 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       return;
     }
 
-    setCart(prevCart => 
-      prevCart.map(item => 
+    setCart(prevCart => {
+      const updatedCart = prevCart.map(item => 
         item.foodItem.id === foodItemId 
           ? { ...item, quantity: newQuantity } 
           : item
-      )
-    );
+      );
+      
+      // Sync with database if user is logged in
+      syncCartToDatabase(updatedCart);
+      
+      return updatedCart;
+    });
   };
 
   const clearCart = () => {
     setCart([]);
-    toast.info('Cart cleared');
+    
+    // Sync with database if user is logged in
+    if (user && cartId) {
+      supabase
+        .from('cart_items')
+        .delete()
+        .eq('cart_id', cartId)
+        .then(() => {
+          toast.info('Cart cleared');
+        })
+        .catch(error => {
+          console.error('Error clearing cart:', error);
+          toast.error('Failed to clear cart');
+        });
+    } else {
+      toast.info('Cart cleared');
+    }
   };
 
   const getTotalItems = () => {
@@ -74,6 +221,70 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const getTotalPrice = () => {
     return cart.reduce((total, item) => total + (item.foodItem.price * item.quantity), 0);
+  };
+  
+  const placeOrder = async (): Promise<string | null> => {
+    if (!user) {
+      toast.error('Please log in to place an order');
+      return null;
+    }
+    
+    if (cart.length === 0) {
+      toast.error('Your cart is empty');
+      return null;
+    }
+    
+    setLoading(true);
+    try {
+      // Create order
+      const { data: newOrder, error: orderError } = await supabase
+        .from('orders')
+        .insert({
+          user_id: user.id,
+          total_price: getTotalPrice()
+        })
+        .select()
+        .single();
+        
+      if (orderError || !newOrder) {
+        throw orderError || new Error('Failed to create order');
+      }
+      
+      // Create order items
+      const orderItems = cart.map(item => ({
+        order_id: newOrder.id,
+        food_item_id: item.foodItem.id,
+        food_name: item.foodItem.name,
+        food_price: item.foodItem.price,
+        food_image_url: item.foodItem.imageUrl,
+        quantity: item.quantity
+      }));
+      
+      const { error: itemsError } = await supabase
+        .from('order_items')
+        .insert(orderItems);
+        
+      if (itemsError) {
+        throw itemsError;
+      }
+      
+      // Clear cart after successful order
+      await supabase
+        .from('cart_items')
+        .delete()
+        .eq('cart_id', cartId);
+        
+      setCart([]);
+      
+      toast.success('Order placed successfully!');
+      return newOrder.id;
+    } catch (error) {
+      console.error('Error placing order:', error);
+      toast.error('Failed to place order');
+      return null;
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -84,7 +295,9 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       updateQuantity, 
       clearCart,
       getTotalItems,
-      getTotalPrice
+      getTotalPrice,
+      placeOrder,
+      loading
     }}>
       {children}
     </CartContext.Provider>

@@ -11,6 +11,7 @@ import Home from "@/pages/Home";
 import Menu from "@/pages/Menu";
 import Cart from "@/pages/Cart";
 import Orders from "@/pages/Orders";
+import Payment from "@/pages/Payment";
 import Auth from "@/pages/Auth";
 import NotFound from "@/pages/NotFound";
 
@@ -42,6 +43,11 @@ const App = () => (
                   <Route path="/" element={<Home />} />
                   <Route path="/menu" element={<Menu />} />
                   <Route path="/cart" element={<Cart />} />
+                  <Route path="/payment" element={
+                    <ProtectedRoute>
+                      <Payment />
+                    </ProtectedRoute>
+                  } />
                   <Route path="/orders" element={
                     <ProtectedRoute>
                       <Orders />

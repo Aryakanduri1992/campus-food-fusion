@@ -11,7 +11,7 @@ interface FoodCardProps {
 }
 
 const FoodCard: React.FC<FoodCardProps> = ({ foodItem }) => {
-  const { addToCart } = useCart();
+  const { addToCart, loading } = useCart();
 
   const getCategoryBadgeClass = (category: string) => {
     switch (category) {
@@ -43,7 +43,7 @@ const FoodCard: React.FC<FoodCardProps> = ({ foodItem }) => {
       <CardContent className="p-4">
         <div className="flex justify-between items-start">
           <h3 className="font-semibold text-lg">{foodItem.name}</h3>
-          <span className="font-bold text-rv-burgundy">${foodItem.price.toFixed(2)}</span>
+          <span className="font-bold text-rv-burgundy">₹{foodItem.price.toFixed(2)}</span>
         </div>
         <p className="text-gray-600 text-sm mt-2">{foodItem.description}</p>
       </CardContent>
@@ -51,6 +51,7 @@ const FoodCard: React.FC<FoodCardProps> = ({ foodItem }) => {
         <Button 
           onClick={() => addToCart(foodItem)}
           className="w-full bg-rv-navy hover:bg-rv-burgundy"
+          disabled={loading}
         >
           <Plus className="mr-2 h-4 w-4" /> Add to Cart
         </Button>

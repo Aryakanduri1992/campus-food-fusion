@@ -21,7 +21,7 @@ export interface CartItem {
 export type OrderStatus = 'Placed' | 'In Process' | 'Delivered';
 
 export interface Order {
-  id: number;
+  id: string;
   items: CartItem[];
   totalPrice: number;
   status: OrderStatus;
