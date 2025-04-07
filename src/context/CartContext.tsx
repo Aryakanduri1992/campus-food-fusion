@@ -1,7 +1,6 @@
-
 import React, { createContext, useState, useContext, ReactNode } from 'react';
 import { CartItem, FoodItem } from '../types';
-import { toast } from '@/components/ui/sonner';
+import { toast } from "sonner";
 
 interface CartContextType {
   cart: CartItem[];
