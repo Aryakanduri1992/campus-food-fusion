@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -8,6 +7,9 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { useAuth } from '@/context/AuthContext';
+import { Loader2 } from 'lucide-react';
+import AuthHeader from '@/components/AuthHeader';
 
 const Auth = () => {
   const [email, setEmail] = useState('');
@@ -18,31 +20,13 @@ const Auth = () => {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { user } = useAuth();
 
   useEffect(() => {
-    // Check if user is already logged in
-    const checkUser = async () => {
-      const { data } = await supabase.auth.getSession();
-      if (data.session) {
-        navigate('/');
-      }
-    };
-    
-    checkUser();
-    
-    // Set up auth state listener
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        if (session) {
-          navigate('/');
-        }
-      }
-    );
-
-    return () => {
-      subscription.unsubscribe();
-    };
-  }, [navigate]);
+    if (user) {
+      navigate('/');
+    }
+  }, [user, navigate]);
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -66,26 +50,18 @@ const Auth = () => {
           data: {
             first_name: firstName,
             last_name: lastName,
+            phone_number: phoneNumber,
           },
         },
       });
 
       if (error) throw error;
 
-      if (data.user) {
-        // If phone number is provided, update the profile
-        if (phoneNumber) {
-          await supabase
-            .from('profiles')
-            .update({ phone_number: phoneNumber })
-            .eq('id', data.user.id);
-        }
-        
-        toast({
-          title: "Account created",
-          description: "Please check your email for confirmation",
-        });
-      }
+      toast({
+        title: "Account created",
+        description: "Please check your email for confirmation",
+      });
+      
     } catch (error: any) {
       toast({
         title: "Error",
@@ -119,7 +95,10 @@ const Auth = () => {
 
       if (error) throw error;
       
-      // No need to navigate here as the auth state listener will handle it
+      toast({
+        title: "Success",
+        description: "You have been logged in successfully",
+      });
     } catch (error: any) {
       toast({
         title: "Error",
@@ -132,19 +111,21 @@ const Auth = () => {
   };
 
   return (
-    <div className="container max-w-md mx-auto py-8 px-4">
+    <div className="container max-w-md mx-auto py-12 px-4">
+      <AuthHeader />
+      
       <Tabs defaultValue="login" className="w-full">
-        <TabsList className="grid w-full grid-cols-2">
+        <TabsList className="grid w-full grid-cols-2 mb-8">
           <TabsTrigger value="login">Login</TabsTrigger>
           <TabsTrigger value="signup">Sign Up</TabsTrigger>
         </TabsList>
         
         <TabsContent value="login">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-center">Welcome Back</CardTitle>
+          <Card className="border-2 border-rv-navy/10 shadow-lg">
+            <CardHeader className="space-y-2">
+              <CardTitle className="text-2xl font-bold text-center text-rv-navy">Welcome Back</CardTitle>
               <CardDescription className="text-center">
-                Login to your RV Eats account
+                Login to your RV Eats account to order delicious food
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -157,6 +138,7 @@ const Auth = () => {
                     placeholder="you@example.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
+                    className="border-rv-navy/20"
                     required
                   />
                 </div>
@@ -168,11 +150,23 @@ const Auth = () => {
                     placeholder="••••••••"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
+                    className="border-rv-navy/20"
                     required
                   />
                 </div>
-                <Button type="submit" className="w-full" disabled={loading}>
-                  {loading ? "Logging in..." : "Login"}
+                <Button 
+                  type="submit" 
+                  className="w-full bg-rv-burgundy hover:bg-rv-burgundy/90 text-white"
+                  disabled={loading}
+                >
+                  {loading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Logging in...
+                    </>
+                  ) : (
+                    "Login"
+                  )}
                 </Button>
               </form>
             </CardContent>
@@ -180,11 +174,11 @@ const Auth = () => {
         </TabsContent>
         
         <TabsContent value="signup">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-center">Create Account</CardTitle>
+          <Card className="border-2 border-rv-navy/10 shadow-lg">
+            <CardHeader className="space-y-2">
+              <CardTitle className="text-2xl font-bold text-center text-rv-navy">Create Account</CardTitle>
               <CardDescription className="text-center">
-                Sign up for an RV Eats account
+                Sign up for an RV Eats account to order delicious food on the go
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -198,6 +192,7 @@ const Auth = () => {
                       placeholder="John"
                       value={firstName}
                       onChange={(e) => setFirstName(e.target.value)}
+                      className="border-rv-navy/20"
                     />
                   </div>
                   <div className="space-y-2">
@@ -208,6 +203,7 @@ const Auth = () => {
                       placeholder="Doe"
                       value={lastName}
                       onChange={(e) => setLastName(e.target.value)}
+                      className="border-rv-navy/20"
                     />
                   </div>
                 </div>
@@ -219,6 +215,7 @@ const Auth = () => {
                     placeholder="you@example.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
+                    className="border-rv-navy/20"
                     required
                   />
                 </div>
@@ -230,6 +227,7 @@ const Auth = () => {
                     placeholder="••••••••"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
+                    className="border-rv-navy/20"
                     required
                   />
                 </div>
@@ -241,13 +239,30 @@ const Auth = () => {
                     placeholder="(123) 456-7890"
                     value={phoneNumber}
                     onChange={(e) => setPhoneNumber(e.target.value)}
+                    className="border-rv-navy/20"
                   />
                 </div>
-                <Button type="submit" className="w-full" disabled={loading}>
-                  {loading ? "Creating account..." : "Sign Up"}
+                <Button 
+                  type="submit" 
+                  className="w-full bg-rv-burgundy hover:bg-rv-burgundy/90 text-white" 
+                  disabled={loading}
+                >
+                  {loading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Creating account...
+                    </>
+                  ) : (
+                    "Sign Up"
+                  )}
                 </Button>
               </form>
             </CardContent>
+            <CardFooter className="flex justify-center pt-0">
+              <p className="text-xs text-muted-foreground">
+                By signing up, you agree to our Terms of Service and Privacy Policy
+              </p>
+            </CardFooter>
           </Card>
         </TabsContent>
       </Tabs>
