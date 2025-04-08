@@ -1,4 +1,5 @@
-import { FoodItem, CartItem, Order } from '../types';
+
+import { FoodItem, CartItem, Order, OrderStatus } from '../types';
 
 // Mock food data
 export const mockFoodItems: FoodItem[] = [
