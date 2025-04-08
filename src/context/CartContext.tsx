@@ -1,6 +1,6 @@
 
 import React, { createContext, useState, useContext, ReactNode, useEffect } from 'react';
-import { CartItem, FoodItem, DbCartItem, DbOrderItem } from '../types';
+import { CartItem, FoodItem, DbCartItem, DbOrderItem, Database } from '../types';
 import { toast } from "sonner";
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/AuthContext';

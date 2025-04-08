@@ -80,7 +80,7 @@ export const mockFoodItems: FoodItem[] = [
 // Mock past orders
 export const mockOrders: Order[] = [
   {
-    id: 1,
+    id: "order1",
     items: [
       { foodItem: mockFoodItems[0], quantity: 1 },
       { foodItem: mockFoodItems[4], quantity: 1 },
@@ -90,7 +90,7 @@ export const mockOrders: Order[] = [
     timestamp: '2025-04-05T14:30:00Z',
   },
   {
-    id: 2,
+    id: "order2",
     items: [
       { foodItem: mockFoodItems[2], quantity: 1 },
       { foodItem: mockFoodItems[5], quantity: 2 },
@@ -100,7 +100,7 @@ export const mockOrders: Order[] = [
     timestamp: '2025-04-06T12:15:00Z',
   },
   {
-    id: 3,
+    id: "order3",
     items: [
       { foodItem: mockFoodItems[7], quantity: 1 },
     ],

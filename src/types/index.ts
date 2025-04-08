@@ -58,3 +58,61 @@ export interface DbOrderItem {
   quantity: number;
   created_at: string;
 }
+
+// Type safety for all database tables
+export type Database = {
+  public: {
+    Tables: {
+      carts: {
+        Row: {
+          id: string;
+          user_id: string;
+          created_at: string;
+        };
+      };
+      cart_items: {
+        Row: {
+          id: string;
+          cart_id: string;
+          food_item_id: number;
+          food_name: string;
+          food_price: number;
+          food_image_url: string;
+          quantity: number;
+          created_at: string;
+        };
+      };
+      orders: {
+        Row: {
+          id: string;
+          user_id: string;
+          status: string;
+          total_price: number;
+          created_at: string;
+        };
+      };
+      order_items: {
+        Row: {
+          id: string;
+          order_id: string;
+          food_item_id: number;
+          food_name: string;
+          food_price: number;
+          food_image_url: string;
+          quantity: number;
+          created_at: string;
+        };
+      };
+      profiles: {
+        Row: {
+          id: string;
+          created_at: string;
+          first_name: string | null;
+          last_name: string | null;
+          phone_number: string | null;
+          updated_at: string;
+        };
+      };
+    };
+  };
+};

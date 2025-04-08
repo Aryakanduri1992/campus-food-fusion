@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { formatDistanceToNow } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/AuthContext';
-import { Order, OrderStatus, DbOrderItem } from '@/types';
+import { Order, OrderStatus, DbOrderItem, FoodCategory } from '@/types';
 import { ShoppingBag } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
@@ -59,7 +59,7 @@ const Orders: React.FC = () => {
                     name: item.food_name,
                     price: item.food_price,
                     imageUrl: item.food_image_url,
-                    category: 'Veg', // Default as it's not stored
+                    category: 'Veg' as FoodCategory, // Default as it's not stored
                     description: '' // Default as it's not stored
                   }
                 }))
