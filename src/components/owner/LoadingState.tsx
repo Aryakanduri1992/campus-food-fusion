@@ -1,12 +1,13 @@
 
 import React from 'react';
-import { Loader2, Skeleton } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const LoadingState: React.FC = () => {
   return (
     <div className="container mx-auto py-8 px-4">
       <h1 className="text-3xl font-bold mb-8 text-rv-navy flex items-center">
-        <div className="h-10 w-64 bg-gray-200 rounded animate-pulse"></div>
+        <Skeleton className="h-10 w-64" />
       </h1>
       
       <div className="flex flex-col items-center justify-center py-12">
@@ -17,9 +18,9 @@ const LoadingState: React.FC = () => {
         </p>
         
         <div className="w-full max-w-md space-y-3">
-          <div className="h-4 w-full bg-gray-200 rounded animate-pulse"></div>
-          <div className="h-4 w-3/4 bg-gray-200 rounded animate-pulse"></div>
-          <div className="h-4 w-5/6 bg-gray-200 rounded animate-pulse"></div>
+          <Skeleton className="h-4 w-full" />
+          <Skeleton className="h-4 w-3/4" />
+          <Skeleton className="h-4 w-5/6" />
         </div>
       </div>
     </div>
