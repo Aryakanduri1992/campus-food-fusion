@@ -1,3 +1,4 @@
+
 // Food item types
 export type FoodCategory = 'Veg' | 'Non-Veg' | 'Beverage';
 
@@ -72,8 +73,8 @@ export interface DbUserRole {
 // Delivery partner type
 export interface DeliveryPartner {
   id: string;
-  name: string;
-  phone: string;
+  partner_name: string;  // Changed from name to partner_name to match DB schema
+  phone_number: string;  // Changed from phone to phone_number to match DB schema
   email: string;
   status: 'Available' | 'Busy';
 }

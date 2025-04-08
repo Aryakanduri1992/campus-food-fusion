@@ -66,7 +66,6 @@ const Owner = () => {
   const [estimatedTime, setEstimatedTime] = useState('30-45 minutes');
 
   useEffect(() => {
-    // Check if the user is the owner
     if (user && userRole !== 'owner') {
       toast({
         title: "Access Denied",
@@ -92,7 +91,6 @@ const Owner = () => {
         return;
       }
       
-      // Transform the data into the format we need
       const formattedPartners: DeliveryPartner[] = data.map((item: any) => ({
         id: item.id,
         partner_name: item.partner_name || `Partner ${item.id.substring(0, 4)}`,
@@ -112,7 +110,6 @@ const Owner = () => {
     try {
       setLoading(true);
       
-      // Fetch all orders
       const { data: ordersData, error: ordersError } = await supabase
         .from('orders')
         .select('*')
@@ -120,7 +117,6 @@ const Owner = () => {
         
       if (ordersError) throw ordersError;
       
-      // Fetch order items for each order
       const ordersWithItems = await Promise.all(
         ordersData.map(async (order) => {
           const { data: orderItems, error: itemsError } = await supabase
@@ -161,7 +157,6 @@ const Owner = () => {
     }
 
     try {
-      // Get the selected partner
       const partner = partners.find(p => p.id === selectedPartner);
       
       if (!partner) {
@@ -173,7 +168,6 @@ const Owner = () => {
         return;
       }
       
-      // Update the order status in the database
       const { error: updateError } = await supabase
         .from('orders')
         .update({ 
@@ -191,16 +185,14 @@ const Owner = () => {
         return;
       }
 
-      // In a real app, you would store delivery assignment in a separate table
-      // For now we'll update our local state
       setOrders(prevOrders => 
         prevOrders.map(order => {
           if (order.id === selectedOrder) {
             return {
               ...order,
               status: 'In Process',
-              delivery_partner: partner.name,
-              delivery_phone: partner.phone,
+              delivery_partner: partner.partner_name,
+              delivery_phone: partner.phone_number,
               delivery_email: partner.email,
               estimated_time: estimatedTime
             };
@@ -209,7 +201,6 @@ const Owner = () => {
         })
       );
 
-      // Update partner status
       setPartners(prevPartners => 
         prevPartners.map(p => 
           p.id === selectedPartner 
@@ -237,7 +228,6 @@ const Owner = () => {
 
   const handleCompleteOrder = async (orderId: string) => {
     try {
-      // Update order status in the database
       const { error: updateError } = await supabase
         .from('orders')
         .update({ 
@@ -255,7 +245,6 @@ const Owner = () => {
         return;
       }
       
-      // Mark order as completed in local state
       setOrders(prevOrders => 
         prevOrders.map(order => 
           order.id === orderId 
@@ -264,7 +253,6 @@ const Owner = () => {
         )
       );
 
-      // Free up the delivery partner
       const order = orders.find(o => o.id === orderId);
       if (order?.delivery_partner) {
         setPartners(prevPartners => 
@@ -301,7 +289,6 @@ const Owner = () => {
     }
 
     try {
-      // Store the partner details in the delivery_partners_emails table
       const { data: insertData, error: insertError } = await supabase
         .from('delivery_partners_emails')
         .insert({
@@ -323,7 +310,6 @@ const Owner = () => {
       
       const newId = insertData?.[0]?.id || (partners.length + 1).toString();
       
-      // Add to local state
       setPartners([...partners, { 
         id: newId, 
         partner_name: newPartner.name, 
@@ -349,7 +335,6 @@ const Owner = () => {
   };
 
   const handleRoleAssigned = () => {
-    // Refresh the delivery partners list
     fetchDeliveryPartners();
     
     toast({
@@ -360,7 +345,6 @@ const Owner = () => {
 
   const assignOwnerRole = async (email: string) => {
     try {
-      // Use the assign_role RPC function we created in the SQL migration
       const { error } = await supabase
         .rpc('assign_role', { 
           user_email: email, 
@@ -374,7 +358,6 @@ const Owner = () => {
 
       console.log("Owner role assigned successfully to:", email);
       
-      // Force refresh roles - now using the checkUserRole from useAuth
       if (user) {
         const updatedRole = await checkUserRole();
         console.log("Updated role:", updatedRole);
