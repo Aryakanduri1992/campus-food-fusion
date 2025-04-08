@@ -1,6 +1,6 @@
 
 export interface OrderWithItems {
-  id: string;
+  id: number;
   total_price: number;
   status: string;
   created_at: string;
@@ -21,12 +21,12 @@ export interface DeliveryPartner {
 
 // Additional types for order management
 export interface AssignDeliveryPartnerRequest {
-  orderId: string;
+  orderId: number;
   partnerId: string;
   estimatedTime: string;
 }
 
 export interface OrderStatusUpdateRequest {
-  orderId: string;
+  orderId: number;
   status: string;
 }

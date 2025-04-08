@@ -21,7 +21,7 @@ export interface CartItem {
 export type OrderStatus = 'Placed' | 'In Process' | 'Delivered';
 
 export interface Order {
-  id: string;
+  id: number;
   items: CartItem[];
   totalPrice: number;
   status: OrderStatus;
@@ -44,7 +44,7 @@ export interface DbCartItem {
 }
 
 export interface DbOrder {
-  id: string;
+  id: number;
   user_id: string;
   status: string;
   total_price: number;
@@ -53,7 +53,7 @@ export interface DbOrder {
 
 export interface DbOrderItem {
   id: string;
-  order_id: string;
+  order_id: number;
   food_item_id: number;
   food_name: string;
   food_price: number;
@@ -104,7 +104,7 @@ export type Database = {
       };
       orders: {
         Row: {
-          id: string;
+          id: number;
           user_id: string;
           status: string;
           total_price: number;
@@ -114,7 +114,7 @@ export type Database = {
       order_items: {
         Row: {
           id: string;
-          order_id: string;
+          order_id: number;
           food_item_id: number;
           food_name: string;
           food_price: number;

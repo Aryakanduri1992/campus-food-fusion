@@ -111,7 +111,7 @@ export type Database = {
           food_name: string
           food_price: number
           id: string
-          order_id: string
+          order_id: number
           quantity: number
         }
         Insert: {
@@ -121,7 +121,7 @@ export type Database = {
           food_name: string
           food_price: number
           id?: string
-          order_id: string
+          order_id: number
           quantity: number
         }
         Update: {
@@ -131,7 +131,7 @@ export type Database = {
           food_name?: string
           food_price?: number
           id?: string
-          order_id?: string
+          order_id?: number
           quantity?: number
         }
         Relationships: [
@@ -144,27 +144,108 @@ export type Database = {
           },
         ]
       }
+      order_items_backup: {
+        Row: {
+          created_at: string | null
+          food_image_url: string | null
+          food_item_id: number | null
+          food_name: string | null
+          food_price: number | null
+          id: string | null
+          order_id: string | null
+          quantity: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          food_image_url?: string | null
+          food_item_id?: number | null
+          food_name?: string | null
+          food_price?: number | null
+          id?: string | null
+          order_id?: string | null
+          quantity?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          food_image_url?: string | null
+          food_item_id?: number | null
+          food_name?: string | null
+          food_price?: number | null
+          id?: string | null
+          order_id?: string | null
+          quantity?: number | null
+        }
+        Relationships: []
+      }
       orders: {
         Row: {
           created_at: string
-          id: string
+          delivery_address: string | null
+          delivery_city: string | null
+          delivery_email: string | null
+          delivery_instructions: string | null
+          delivery_partner: string | null
+          delivery_phone: string | null
+          delivery_pincode: string | null
+          estimated_time: string | null
+          id: number
           status: string
           total_price: number
           user_id: string
         }
         Insert: {
           created_at?: string
-          id?: string
+          delivery_address?: string | null
+          delivery_city?: string | null
+          delivery_email?: string | null
+          delivery_instructions?: string | null
+          delivery_partner?: string | null
+          delivery_phone?: string | null
+          delivery_pincode?: string | null
+          estimated_time?: string | null
+          id?: number
           status?: string
           total_price: number
           user_id: string
         }
         Update: {
           created_at?: string
-          id?: string
+          delivery_address?: string | null
+          delivery_city?: string | null
+          delivery_email?: string | null
+          delivery_instructions?: string | null
+          delivery_partner?: string | null
+          delivery_phone?: string | null
+          delivery_pincode?: string | null
+          estimated_time?: string | null
+          id?: number
           status?: string
           total_price?: number
           user_id?: string
+        }
+        Relationships: []
+      }
+      orders_backup: {
+        Row: {
+          created_at: string | null
+          id: string | null
+          status: string | null
+          total_price: number | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string | null
+          status?: string | null
+          total_price?: number | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string | null
+          status?: string | null
+          total_price?: number | null
+          user_id?: string | null
         }
         Relationships: []
       }

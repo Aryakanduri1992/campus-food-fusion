@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -139,7 +138,7 @@ const Orders: React.FC = () => {
           <Card key={order.id}>
             <CardHeader className="pb-2">
               <div className="flex justify-between items-center">
-                <CardTitle className="text-lg">Order #{order.id.substring(0, 8)}</CardTitle>
+                <CardTitle className="text-lg">Order #{order.id}</CardTitle>
                 <Badge className={getStatusColor(order.status)}>{order.status}</Badge>
               </div>
               <p className="text-sm text-gray-500">

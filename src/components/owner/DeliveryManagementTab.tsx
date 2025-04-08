@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -19,26 +18,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { MapPin, Clock, Truck, CheckCircle } from 'lucide-react';
-
-interface OrderWithItems {
-  id: string;
-  total_price: number;
-  status: string;
-  created_at: string;
-  items: any[]; // Order items
-  delivery_partner?: string;
-  delivery_phone?: string;
-  delivery_email?: string;
-  estimated_time?: string;
-}
-
-interface DeliveryPartner {
-  id: string;
-  partner_name?: string;
-  phone_number?: string;
-  email: string;
-  status: 'Available' | 'Busy';
-}
+import { OrderWithItems, DeliveryPartner } from './types';
 
 interface DeliveryManagementTabProps {
   orders: OrderWithItems[];
@@ -54,7 +34,7 @@ const DeliveryManagementTab: React.FC<DeliveryManagementTabProps> = ({
   setPartners 
 }) => {
   const { toast } = useToast();
-  const [selectedOrder, setSelectedOrder] = useState<string | null>(null);
+  const [selectedOrder, setSelectedOrder] = useState<number | null>(null);
   const [selectedPartner, setSelectedPartner] = useState<string | null>(null);
   const [estimatedTime, setEstimatedTime] = useState('30-45 minutes');
 
@@ -83,7 +63,11 @@ const DeliveryManagementTab: React.FC<DeliveryManagementTabProps> = ({
       const { error: updateError } = await supabase
         .from('orders')
         .update({ 
-          status: 'In Process'
+          status: 'In Process',
+          delivery_partner: partner.partner_name,
+          delivery_phone: partner.phone_number,
+          delivery_email: partner.email,
+          estimated_time: estimatedTime
         })
         .eq('id', selectedOrder);
         
@@ -138,7 +122,7 @@ const DeliveryManagementTab: React.FC<DeliveryManagementTabProps> = ({
     }
   };
 
-  const handleCompleteOrder = async (orderId: string) => {
+  const handleCompleteOrder = async (orderId: number) => {
     try {
       const { error: updateError } = await supabase
         .from('orders')
@@ -200,7 +184,10 @@ const DeliveryManagementTab: React.FC<DeliveryManagementTabProps> = ({
         <CardContent className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="order-select">Select Order</Label>
-            <Select onValueChange={setSelectedOrder} value={selectedOrder || undefined}>
+            <Select 
+              onValueChange={(value) => setSelectedOrder(Number(value))} 
+              value={selectedOrder?.toString() || undefined}
+            >
               <SelectTrigger>
                 <SelectValue placeholder="Select an order" />
               </SelectTrigger>
@@ -208,8 +195,8 @@ const DeliveryManagementTab: React.FC<DeliveryManagementTabProps> = ({
                 {orders
                   .filter(order => order.status === 'Placed')
                   .map(order => (
-                    <SelectItem key={order.id} value={order.id}>
-                      Order #{order.id.substring(0, 8)} - ₹{order.total_price.toFixed(2)}
+                    <SelectItem key={order.id} value={order.id.toString()}>
+                      Order #{order.id} - ₹{order.total_price.toFixed(2)}
                     </SelectItem>
                   ))}
               </SelectContent>
@@ -271,7 +258,7 @@ const DeliveryManagementTab: React.FC<DeliveryManagementTabProps> = ({
                 <div key={order.id} className="border rounded-lg p-4 space-y-3">
                   <div className="flex justify-between items-center">
                     <div>
-                      <h3 className="font-semibold">Order #{order.id.substring(0, 8)}</h3>
+                      <h3 className="font-semibold">Order #{order.id}</h3>
                       <p className="text-sm text-gray-500">₹{order.total_price.toFixed(2)} - {order.items.length} items</p>
                     </div>
                     <Button 

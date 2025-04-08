@@ -1,4 +1,3 @@
-
 import { useState, useCallback } from 'react';
 import { CartItem, CartState } from './types';
 import { toast } from "sonner";
@@ -24,7 +23,6 @@ export function useCartOperations(user: User | null) {
   });
 
   const syncCartToDatabase = useCallback(async (updatedCart: CartItem[], targetCartId: string | null = state.cartId) => {
-    // Always save to local storage first for faster access
     saveCartToLocalStorage(updatedCart);
     
     if (!user || !targetCartId) {
@@ -58,14 +56,12 @@ export function useCartOperations(user: User | null) {
     
     try {
       if (!user) {
-        // If user is not logged in, try to get cart from local storage
         const savedCart = loadCartFromLocalStorage();
         console.log('Loaded cart from local storage:', savedCart);
         setState(prev => ({ ...prev, cart: savedCart, cartId: null }));
         return;
       }
       
-      // User is logged in, try to get cart from database
       const { data: existingCarts, error: cartsError } = await supabase
         .from('carts')
         .select('*')
@@ -96,10 +92,8 @@ export function useCartOperations(user: User | null) {
           
           console.log('Formatted cart items:', formattedItems);
           setState(prev => ({ ...prev, cart: formattedItems, cartId: currentCartId }));
-          // Also save to local storage
           saveCartToLocalStorage(formattedItems);
         } else {
-          // Cart exists but is empty - check if there's something in local storage
           console.log('Cart exists but is empty, checking local storage');
           const savedCart = loadCartFromLocalStorage();
           if (savedCart && savedCart.length > 0) {
@@ -118,7 +112,6 @@ export function useCartOperations(user: User | null) {
         if (newCart) {
           currentCartId = newCart.id;
           
-          // Try to get cart from local storage and save to DB
           try {
             const savedCart = loadCartFromLocalStorage();
             if (savedCart.length > 0) {
@@ -135,7 +128,6 @@ export function useCartOperations(user: User | null) {
       }
     } catch (error) {
       console.error('Error fetching cart:', error);
-      // Fall back to local storage on error
       const savedCart = loadCartFromLocalStorage();
       setState(prev => ({ ...prev, cart: savedCart || [] }));
       toast.error('Failed to load your cart from server, using local data');
@@ -163,10 +155,8 @@ export function useCartOperations(user: User | null) {
       
       console.log('Updated cart after add:', updatedCart);
       
-      // Don't call syncCartToDatabase inside setState to avoid infinite loop
       const newState = { ...prev, cart: updatedCart };
       
-      // Schedule sync to run after state update
       setTimeout(() => syncCartToDatabase(updatedCart), 0);
       
       return newState;
@@ -184,7 +174,6 @@ export function useCartOperations(user: User | null) {
       
       console.log('Updated cart after remove:', updatedCart);
       
-      // Schedule sync to run after state update
       setTimeout(() => syncCartToDatabase(updatedCart), 0);
       
       return { ...prev, cart: updatedCart };
@@ -206,7 +195,6 @@ export function useCartOperations(user: User | null) {
       
       console.log('Updated cart after quantity change:', updatedCart);
       
-      // Schedule sync to run after state update
       setTimeout(() => syncCartToDatabase(updatedCart), 0);
       
       return { ...prev, cart: updatedCart };
@@ -214,7 +202,6 @@ export function useCartOperations(user: User | null) {
   }, [removeFromCart, syncCartToDatabase]);
 
   const clearCart = useCallback(() => {
-    // Clear local storage
     clearCartFromLocalStorage();
     
     setState(prev => ({ ...prev, cart: [] }));
@@ -234,7 +221,7 @@ export function useCartOperations(user: User | null) {
     }
   }, [user, state.cartId]);
 
-  const placeOrder = useCallback(async (): Promise<string | null> => {
+  const placeOrder = useCallback(async (): Promise<number | null> => {
     if (!user) {
       toast.error('Please log in to place an order');
       return null;
@@ -281,12 +268,10 @@ export function useCartOperations(user: User | null) {
         throw itemsError;
       }
       
-      // Clear cart after successful order
       if (state.cartId) {
         await deleteCartItems(state.cartId);
       }
       
-      // Clear local storage when order is placed
       clearCartFromLocalStorage();
         
       setState(prev => ({ ...prev, cart: [] }));

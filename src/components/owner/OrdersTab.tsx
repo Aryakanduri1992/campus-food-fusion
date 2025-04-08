@@ -17,18 +17,7 @@ import {
   CardHeader, 
   CardTitle 
 } from '@/components/ui/card';
-
-interface OrderWithItems {
-  id: string;
-  total_price: number;
-  status: string;
-  created_at: string;
-  items: any[]; // Order items
-  delivery_partner?: string;
-  delivery_phone?: string;
-  delivery_email?: string;
-  estimated_time?: string;
-}
+import { OrderWithItems } from './types';
 
 interface OrdersTabProps {
   orders: OrderWithItems[];
@@ -60,7 +49,7 @@ const OrdersTab: React.FC<OrdersTabProps> = ({ orders }) => {
             {orders.length > 0 ? (
               orders.map(order => (
                 <TableRow key={order.id}>
-                  <TableCell className="font-medium">{order.id.substring(0, 8)}</TableCell>
+                  <TableCell className="font-medium">#{order.id}</TableCell>
                   <TableCell>{new Date(order.created_at).toLocaleDateString()}</TableCell>
                   <TableCell>₹{order.total_price.toFixed(2)}</TableCell>
                   <TableCell>
