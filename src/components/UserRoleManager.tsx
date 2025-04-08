@@ -129,14 +129,21 @@ const UserRoleManager: React.FC<UserRoleManagerProps> = ({ onRoleAssigned }) => 
 
       console.log("Role assigned successfully");
       
-      // Try to get the user_id from auth users
-      const { data: userData, error: userError } = await supabase.auth.admin.getUserByEmail(email);
+      // Instead of trying to get user by email directly (which is not supported),
+      // we'll query the database for the user ID associated with the role we just assigned
+      const { data: userData, error: userError } = await supabase
+        .from('user_roles')
+        .select('user_id')
+        .eq('role', 'delivery_partner')
+        .eq('email', email)
+        .maybeSingle();
+
       let userId = null;
       
       if (userError) {
-        console.error("Error fetching user:", userError);
+        console.error("Error fetching user ID:", userError);
       } else if (userData) {
-        userId = userData.user.id;
+        userId = userData.user_id;
       }
       
       // Get the role ID for the newly assigned role
