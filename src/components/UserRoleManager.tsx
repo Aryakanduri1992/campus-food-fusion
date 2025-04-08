@@ -36,64 +36,22 @@ const UserRoleManager: React.FC<UserRoleManagerProps> = ({ onRoleAssigned }) => 
     setLoading(true);
 
     try {
-      // First, check if user exists in the auth system by querying profiles by email
-      const { data: userInfo, error: userError } = await supabase.auth.admin.getUserById(email);
-      
-      if (userError || !userInfo?.user) {
-        // If we can't get user directly, try to find by email (this is less reliable)
-        // In a real app, you'd need a more robust way to find users by email
-        const { data: authUser, error: authFindError } = await supabase
-          .from('profiles')
-          .select('id')
-          .eq('email', email)
-          .maybeSingle();
-          
-        if (authFindError || !authUser) {
-          toast({
-            title: "User Not Found",
-            description: "No user with this email address exists in the system. They must sign up first.",
-            variant: "destructive"
-          });
-          setLoading(false);
-          return;
-        }
-        
-        // Insert role for user found by email
-        const { error: roleError } = await supabase
-          .rpc('assign_role', { 
-            user_email: email, 
-            assigned_role: 'delivery_partner' 
-          });
+      // Use the assign_role RPC function we created in the SQL migration
+      const { error } = await supabase
+        .rpc('assign_role', { 
+          user_email: email, 
+          assigned_role: 'delivery_partner' 
+        });
 
-        if (roleError) {
-          console.error("Error assigning role:", roleError);
-          toast({
-            title: "Role Assignment Failed",
-            description: "Could not assign delivery partner role to this user. Make sure they are registered.",
-            variant: "destructive"
-          });
-          setLoading(false);
-          return;
-        }
-      } else {
-        // User exists, directly insert role
-        const { error: roleError } = await supabase
-          .from('user_roles')
-          .insert({
-            user_id: userInfo.user.id,
-            role: 'delivery_partner' as UserRole
-          });
-
-        if (roleError) {
-          console.error("Error assigning role:", roleError);
-          toast({
-            title: "Role Assignment Failed",
-            description: "Could not assign delivery partner role to this user",
-            variant: "destructive"
-          });
-          setLoading(false);
-          return;
-        }
+      if (error) {
+        console.error("Error assigning role:", error);
+        toast({
+          title: "Role Assignment Failed",
+          description: "Could not assign delivery partner role to this user. Make sure they are registered.",
+          variant: "destructive"
+        });
+        setLoading(false);
+        return;
       }
 
       toast({
