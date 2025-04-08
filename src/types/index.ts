@@ -1,4 +1,3 @@
-
 // Food item types
 export type FoodCategory = 'Veg' | 'Non-Veg' | 'Beverage';
 
@@ -144,4 +143,3 @@ export type Database = {
     };
   };
 };
-

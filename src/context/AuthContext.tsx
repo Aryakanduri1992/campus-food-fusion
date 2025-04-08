@@ -36,6 +36,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (!user) return null;
 
     try {
+      // Using a separate, type-safe query method to avoid TypeScript errors
       const { data, error } = await supabase
         .from('user_roles')
         .select('role')

@@ -36,64 +36,51 @@ const UserRoleManager: React.FC<UserRoleManagerProps> = ({ onRoleAssigned }) => 
     setLoading(true);
 
     try {
-      // First check if user exists
-      const { data: userData, error: userError } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('id', (await supabase.auth.getUser(email)).data.user?.id)
-        .single();
-
-      if (userError) {
-        // If user doesn't exist in profiles, try to get from auth
-        const { data: authData, error: authError } = await supabase.auth.admin.getUserByEmail(email);
-        
-        if (authError || !authData?.user) {
+      // First, check if user exists in the auth system by querying profiles by email
+      const { data: userInfo, error: userError } = await supabase.auth.admin.getUserById(email);
+      
+      if (userError || !userInfo?.user) {
+        // If we can't get user directly, try to find by email (this is less reliable)
+        // In a real app, you'd need a more robust way to find users by email
+        const { data: authUser, error: authFindError } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('email', email)
+          .maybeSingle();
+          
+        if (authFindError || !authUser) {
           toast({
             title: "User Not Found",
-            description: "No user with this email address exists in the system",
+            description: "No user with this email address exists in the system. They must sign up first.",
             variant: "destructive"
           });
           setLoading(false);
           return;
         }
         
-        // Insert role for user
+        // Insert role for user found by email
         const { error: roleError } = await supabase
-          .from('user_roles')
-          .insert({
-            user_id: authData.user.id,
-            role: 'delivery_partner' as UserRole
+          .rpc('assign_role', { 
+            user_email: email, 
+            assigned_role: 'delivery_partner' 
           });
 
         if (roleError) {
           console.error("Error assigning role:", roleError);
           toast({
             title: "Role Assignment Failed",
-            description: "Could not assign delivery partner role to this user",
+            description: "Could not assign delivery partner role to this user. Make sure they are registered.",
             variant: "destructive"
           });
           setLoading(false);
           return;
         }
       } else {
-        // User exists in profiles, get their ID from auth
-        const { data: authUser, error: authError } = await supabase.auth.admin.getUserByEmail(email);
-        
-        if (authError || !authUser?.user) {
-          toast({
-            title: "User Not Found",
-            description: "No user with this email address exists in the auth system",
-            variant: "destructive"
-          });
-          setLoading(false);
-          return;
-        }
-        
-        // Insert role for user
+        // User exists, directly insert role
         const { error: roleError } = await supabase
           .from('user_roles')
           .insert({
-            user_id: authUser.user.id,
+            user_id: userInfo.user.id,
             role: 'delivery_partner' as UserRole
           });
 
@@ -120,7 +107,7 @@ const UserRoleManager: React.FC<UserRoleManagerProps> = ({ onRoleAssigned }) => 
       console.error("Unexpected error:", error);
       toast({
         title: "Error",
-        description: "An unexpected error occurred",
+        description: "The user must be registered first before they can be assigned a role.",
         variant: "destructive"
       });
     } finally {
