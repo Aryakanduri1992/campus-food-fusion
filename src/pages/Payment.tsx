@@ -1,314 +1,264 @@
 
-import React, { useState } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { toast } from 'sonner';
-import AuthHeader from '@/components/AuthHeader';
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useCart } from '@/context/CartContext';
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { useToast } from '@/hooks/use-toast';
+import { CreditCard, WalletIcon, Loader2, UtensilsCrossed } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
-import DeliveryTracking from '@/components/DeliveryTracking';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
-const Payment: React.FC = () => {
+const Payment = () => {
+  const { cart, getTotalPrice, placeOrder, loading } = useCart();
   const navigate = useNavigate();
-  const location = useLocation();
-  const { user } = useAuth();
-  const orderId = location.state?.orderId;
-  const totalAmount = location.state?.totalAmount || 0;
-  const locationData = location.state?.locationData;
+  const { toast } = useToast();
+  const [paymentMethod, setPaymentMethod] = useState<'card' | 'upi'>('card');
+  const [cardNumber, setCardNumber] = useState('');
+  const [expiryDate, setExpiryDate] = useState('');
+  const [cvv, setCvv] = useState('');
+  const [nameOnCard, setNameOnCard] = useState('');
+  const [processingPayment, setProcessingPayment] = useState(false);
+  const [showDeliveryInfo, setShowDeliveryInfo] = useState(false);
   
-  const [paymentDetails, setPaymentDetails] = useState({
-    cardName: '',
-    cardNumber: '',
-    expiryDate: '',
-    cvv: ''
-  });
-  
-  const [upiId, setUpiId] = useState('9113950544@upi');
-  const [loading, setLoading] = useState(false);
-  const [orderPlaced, setOrderPlaced] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState('card');
-  
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setPaymentDetails(prev => ({
-      ...prev,
-      [name]: value
-    }));
+  const deliveryPerson = {
+    name: "Rahul Kumar",
+    phone: "9876543210",
+    estimatedTime: "30-45 minutes"
   };
-  
-  const handleCardNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    let value = e.target.value.replace(/\D/g, '');
-    
-    if (value.length > 0) {
-      value = value.match(/.{1,4}/g)?.join(' ') || value;
+
+  useEffect(() => {
+    if (cart.length === 0) {
+      navigate('/cart');
+      toast({
+        title: "Empty Cart",
+        description: "Your cart is empty. Please add items before proceeding to payment.",
+        variant: "destructive",
+      });
+    }
+  }, [cart, navigate, toast]);
+
+  const handlePayment = async () => {
+    if (paymentMethod === 'card' && (!cardNumber || !expiryDate || !cvv || !nameOnCard)) {
+      toast({
+        title: "Missing Information",
+        description: "Please fill in all card details",
+        variant: "destructive",
+      });
+      return;
     }
     
-    if (value.length <= 19) {
-      setPaymentDetails(prev => ({
-        ...prev,
-        cardNumber: value
-      }));
-    }
-  };
-  
-  const handleExpiryDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    let value = e.target.value.replace(/\D/g, '');
+    setProcessingPayment(true);
     
-    if (value.length > 2) {
-      value = value.substring(0, 2) + '/' + value.substring(2, 4);
-    }
-    
-    if (value.length <= 5) {
-      setPaymentDetails(prev => ({
-        ...prev,
-        expiryDate: value
-      }));
-    }
-  };
-  
-  const handleCvvChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value.replace(/\D/g, '');
-    
-    if (value.length <= 3) {
-      setPaymentDetails(prev => ({
-        ...prev,
-        cvv: value
-      }));
-    }
-  };
-  
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (paymentMethod === 'card') {
-      if (!paymentDetails.cardName.trim()) {
-        toast.error('Please enter cardholder name');
-        return;
-      }
+    try {
+      // Process payment
+      const orderId = await placeOrder();
       
-      if (paymentDetails.cardNumber.replace(/\s/g, '').length !== 16) {
-        toast.error('Please enter a valid 16-digit card number');
-        return;
+      if (orderId) {
+        // Simulate payment processing
+        setTimeout(() => {
+          setProcessingPayment(false);
+          toast({
+            title: "Payment Successful",
+            description: "Your order has been placed successfully!",
+          });
+          setShowDeliveryInfo(true);
+        }, 2000);
+      } else {
+        throw new Error("Failed to place order");
       }
-      
-      if (!paymentDetails.expiryDate.includes('/')) {
-        toast.error('Please enter a valid expiry date (MM/YY)');
-        return;
-      }
-      
-      if (paymentDetails.cvv.length !== 3) {
-        toast.error('Please enter a valid 3-digit CVV');
-        return;
-      }
+    } catch (error) {
+      setProcessingPayment(false);
+      toast({
+        title: "Payment Failed",
+        description: error instanceof Error ? error.message : "An error occurred during payment",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const formatCardNumber = (value: string) => {
+    const val = value.replace(/\s+/g, '').replace(/[^0-9]/gi, '');
+    const matches = val.match(/\d{4,16}/g);
+    const match = matches && matches[0] || '';
+    const parts = [];
+    
+    for (let i = 0, len = match.length; i < len; i += 4) {
+      parts.push(match.substring(i, i + 4));
     }
     
-    setLoading(true);
-    
-    setTimeout(() => {
-      setLoading(false);
-      setOrderPlaced(true);
-      toast.success('Payment successful!');
-    }, 1500);
+    if (parts.length) {
+      return parts.join(' ');
+    } else {
+      return value;
+    }
   };
-  
-  if (orderPlaced) {
-    return (
-      <div className="container mx-auto px-4 py-8 mb-16 md:mb-0">
-        <div className="max-w-md mx-auto">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-center text-green-600">Order Confirmed!</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="text-center mb-4">
-                <p className="mb-2">Your order has been successfully placed.</p>
-                <p className="text-sm text-gray-500">Order ID: {orderId?.substring(0, 8)}</p>
-              </div>
-              
-              <DeliveryTracking orderId={orderId} />
-              
-              <div className="mt-4 p-4 bg-gray-50 rounded-md">
-                <h3 className="font-semibold mb-2">Delivery Address:</h3>
-                <p className="text-sm">{locationData?.address}</p>
-                {locationData?.landmark && <p className="text-sm text-gray-600">Landmark: {locationData.landmark}</p>}
-                <p className="text-sm">{locationData?.city}, {locationData.pincode}</p>
-                {locationData?.instructions && <p className="text-sm italic mt-2">"{locationData.instructions}"</p>}
-              </div>
-              
-              <Button 
-                className="w-full mt-6"
-                onClick={() => navigate('/orders')}
-              >
-                View All Orders
-              </Button>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-    );
-  }
-  
-  if (!orderId || !locationData) {
-    return (
-      <div className="container mx-auto px-4 py-12 mb-16 md:mb-0">
-        <Card className="max-w-md mx-auto">
-          <CardHeader>
-            <CardTitle className="text-center text-rv-navy">Invalid Order</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4 text-center">
-            <p>No order or location information found.</p>
-            <Button onClick={() => navigate('/menu')}>Browse Menu</Button>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-  
+
+  const handleCardNumberChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const value = event.target.value;
+    setCardNumber(formatCardNumber(value));
+  };
+
+  const handleExpiryDateChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const value = event.target.value.replace(/\D/g, '');
+    if (value.length <= 4) {
+      const month = value.substring(0, 2);
+      const year = value.substring(2, 4);
+      
+      if (value.length <= 2) {
+        setExpiryDate(value);
+      } else {
+        setExpiryDate(`${month}/${year}`);
+      }
+    }
+  };
+
   return (
-    <div className="container mx-auto px-4 py-8 mb-16 md:mb-0">
-      <div className="max-w-md mx-auto">
-        <AuthHeader />
-        
-        <Card>
+    <div className="container mx-auto py-8 px-4">
+      <h1 className="text-3xl font-bold text-center mb-8 text-rv-navy">Secure Payment</h1>
+      
+      {showDeliveryInfo ? (
+        <Card className="w-full max-w-md mx-auto shadow-lg border-2 border-rv-navy/10">
+          <CardHeader className="bg-green-50">
+            <CardTitle className="text-center text-green-700">Order Confirmed!</CardTitle>
+            <CardDescription className="text-center text-green-600">
+              Your order has been placed successfully.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="pt-6 space-y-4">
+            <div className="bg-amber-50 p-4 rounded-md border border-amber-200">
+              <h3 className="font-semibold text-amber-800 mb-2">Delivery Information</h3>
+              <div className="space-y-2">
+                <p className="text-sm"><span className="font-semibold">Delivery Partner:</span> {deliveryPerson.name}</p>
+                <p className="text-sm"><span className="font-semibold">Contact Number:</span> {deliveryPerson.phone}</p>
+                <p className="text-sm"><span className="font-semibold">Estimated Delivery:</span> {deliveryPerson.estimatedTime}</p>
+              </div>
+            </div>
+            <p className="text-sm text-gray-600 text-center">You will receive updates about your order status.</p>
+          </CardContent>
+          <CardFooter>
+            <Button 
+              className="w-full bg-rv-burgundy hover:bg-rv-burgundy/90"
+              onClick={() => navigate('/orders')}
+            >
+              View Order Details
+            </Button>
+          </CardFooter>
+        </Card>
+      ) : (
+        <Card className="w-full max-w-md mx-auto shadow-lg border-2 border-rv-navy/10">
           <CardHeader>
-            <CardTitle className="text-center text-rv-navy">Payment Details</CardTitle>
+            <CardTitle className="text-center">Payment Options</CardTitle>
+            <CardDescription className="text-center">
+              Choose your preferred payment method
+            </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="mb-4 p-4 bg-gray-50 rounded-md">
-              <div className="flex justify-between">
-                <span className="font-semibold">Order ID:</span>
-                <span className="text-gray-600">{orderId.substring(0, 8)}</span>
-              </div>
-              <div className="flex justify-between mt-2">
-                <span className="font-semibold">Total Amount:</span>
-                <span className="font-bold text-rv-burgundy">₹{totalAmount.toFixed(2)}</span>
-              </div>
-            </div>
-            
-            <div className="mb-4 p-4 bg-gray-50 rounded-md">
-              <h3 className="font-semibold mb-2">Delivery To:</h3>
-              <p className="text-sm">{locationData.address}</p>
-              {locationData.landmark && <p className="text-sm text-gray-600">Landmark: {locationData.landmark}</p>}
-              <p className="text-sm">{locationData.city}, {locationData.pincode}</p>
-            </div>
-            
-            <Tabs defaultValue="card" className="w-full mb-4" onValueChange={setPaymentMethod}>
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="card">Credit/Debit Card</TabsTrigger>
-                <TabsTrigger value="upi">UPI Payment</TabsTrigger>
+            <Tabs defaultValue="card" onValueChange={(value) => setPaymentMethod(value as 'card' | 'upi')}>
+              <TabsList className="grid w-full grid-cols-2 mb-6">
+                <TabsTrigger value="card" className="flex items-center justify-center gap-2">
+                  <CreditCard className="h-4 w-4" />
+                  Card
+                </TabsTrigger>
+                <TabsTrigger value="upi" className="flex items-center justify-center gap-2">
+                  <WalletIcon className="h-4 w-4" />
+                  UPI
+                </TabsTrigger>
               </TabsList>
               
-              <TabsContent value="card">
-                <form onSubmit={handleSubmit} className="space-y-4 mt-4">
+              <TabsContent value="card" className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="nameOnCard">Name on Card</Label>
+                  <Input
+                    id="nameOnCard"
+                    placeholder="John Doe"
+                    value={nameOnCard}
+                    onChange={(e) => setNameOnCard(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="cardNumber">Card Number</Label>
+                  <Input
+                    id="cardNumber"
+                    placeholder="0000 0000 0000 0000"
+                    value={cardNumber}
+                    onChange={handleCardNumberChange}
+                    maxLength={19}
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="cardName">Cardholder Name</Label>
-                    <Input 
-                      id="cardName" 
-                      name="cardName" 
-                      placeholder="Enter cardholder name"
-                      value={paymentDetails.cardName}
-                      onChange={handleInputChange}
-                      required
-                    />
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="cardNumber">Card Number</Label>
+                    <Label htmlFor="expiryDate">Expiry Date</Label>
                     <Input
-                      id="cardNumber"
-                      name="cardNumber"
-                      placeholder="1234 5678 9012 3456"
-                      value={paymentDetails.cardNumber}
-                      onChange={handleCardNumberChange}
-                      required
+                      id="expiryDate"
+                      placeholder="MM/YY"
+                      value={expiryDate}
+                      onChange={handleExpiryDateChange}
+                      maxLength={5}
                     />
                   </div>
-                  
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="expiryDate">Expiry Date</Label>
-                      <Input
-                        id="expiryDate"
-                        name="expiryDate"
-                        placeholder="MM/YY"
-                        value={paymentDetails.expiryDate}
-                        onChange={handleExpiryDateChange}
-                        required
-                      />
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <Label htmlFor="cvv">CVV</Label>
-                      <Input
-                        id="cvv"
-                        name="cvv"
-                        placeholder="123"
-                        type="password"
-                        value={paymentDetails.cvv}
-                        onChange={handleCvvChange}
-                        required
-                      />
-                    </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="cvv">CVV</Label>
+                    <Input
+                      id="cvv"
+                      placeholder="123"
+                      value={cvv}
+                      onChange={(e) => setCvv(e.target.value.replace(/\D/g, '').slice(0, 3))}
+                      maxLength={3}
+                      type="password"
+                    />
                   </div>
-                  
-                  <Button 
-                    type="submit"
-                    className="w-full bg-rv-navy hover:bg-rv-burgundy"
-                    disabled={loading}
-                  >
-                    {loading ? 'Processing...' : 'Pay ₹'+totalAmount.toFixed(2)}
-                  </Button>
-                </form>
+                </div>
               </TabsContent>
               
-              <TabsContent value="upi">
-                <div className="space-y-4 mt-4">
-                  <div className="p-4 bg-gray-50 rounded-md text-center">
-                    <p className="font-semibold mb-2">UPI Payment</p>
-                    <p className="text-lg font-bold my-3">{upiId}</p>
-                    <p className="text-sm text-gray-600 mb-3">Please use the UPI ID above to make your payment of ₹{totalAmount.toFixed(2)}</p>
-                    <div className="bg-white p-4 rounded-md border border-gray-200 max-w-xs mx-auto mb-3">
-                      <div className="text-center">
-                        <div className="text-lg font-bold">Scan QR Code</div>
-                        <div className="h-48 flex items-center justify-center border border-dashed border-gray-300 mt-2 mb-2">
-                          <p className="text-sm text-gray-500">QR Code Placeholder</p>
-                        </div>
-                      </div>
-                    </div>
-                    <p className="text-sm text-gray-600">After completing the payment, click the button below</p>
+              <TabsContent value="upi" className="space-y-4">
+                <div className="text-center p-4 border rounded-md bg-gray-50">
+                  <p className="font-semibold mb-2">Pay using UPI ID</p>
+                  <div className="font-mono text-lg bg-white p-2 rounded border mb-4">9113950544@upi</div>
+                  <div className="w-48 h-48 bg-gray-200 rounded mx-auto mb-4 flex items-center justify-center">
+                    <p className="text-sm text-gray-500">QR Code Placeholder</p>
                   </div>
-                  
-                  <Button 
-                    onClick={handleSubmit}
-                    className="w-full bg-green-600 hover:bg-green-700"
-                    disabled={loading}
-                  >
-                    {loading ? 'Verifying...' : 'I\'ve Completed the Payment'}
-                  </Button>
+                  <p className="text-sm text-gray-600">Scan the QR code or use the UPI ID to make the payment</p>
                 </div>
               </TabsContent>
             </Tabs>
             
-            <Button 
-              type="button"
-              variant="outline"
-              className="w-full mt-2"
-              onClick={() => navigate('/location', { 
-                state: { 
-                  orderId: orderId,
-                  totalAmount: totalAmount
-                } 
-              })}
-              disabled={loading}
-            >
-              Back to Delivery Details
-            </Button>
+            <div className="mt-6 pt-4 border-t">
+              <div className="flex justify-between mb-2">
+                <span>Subtotal:</span>
+                <span>₹{getTotalPrice().toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between mb-2">
+                <span>Delivery Fee:</span>
+                <span>₹30.00</span>
+              </div>
+              <div className="flex justify-between font-bold mt-2 pt-2 border-t">
+                <span>Total:</span>
+                <span>₹{(getTotalPrice() + 30).toFixed(2)}</span>
+              </div>
+            </div>
           </CardContent>
+          <CardFooter>
+            <Button
+              className="w-full bg-rv-burgundy hover:bg-rv-burgundy/90"
+              onClick={handlePayment}
+              disabled={processingPayment || loading}
+            >
+              {processingPayment || loading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Processing...
+                </>
+              ) : (
+                `Pay ₹${(getTotalPrice() + 30).toFixed(2)}`
+              )}
+            </Button>
+          </CardFooter>
         </Card>
-      </div>
+      )}
     </div>
   );
 };

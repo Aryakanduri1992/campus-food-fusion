@@ -13,6 +13,7 @@ import Cart from "@/pages/Cart";
 import Orders from "@/pages/Orders";
 import Payment from "@/pages/Payment";
 import Location from "@/pages/Location";
+import Owner from "@/pages/Owner";
 import Auth from "@/pages/Auth";
 import NotFound from "@/pages/NotFound";
 
@@ -25,6 +26,19 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   if (loading) return <div className="flex items-center justify-center h-screen">Loading...</div>;
   
   if (!user) return <Navigate to="/auth" replace />;
+  
+  return <>{children}</>;
+};
+
+// Owner route component - only for aryaprasad771@gmail.com
+const OwnerRoute = ({ children }: { children: React.ReactNode }) => {
+  const { user, loading } = useAuth();
+  
+  if (loading) return <div className="flex items-center justify-center h-screen">Loading...</div>;
+  
+  if (!user) return <Navigate to="/auth" replace />;
+  
+  if (user.email !== 'aryaprasad771@gmail.com') return <Navigate to="/" replace />;
   
   return <>{children}</>;
 };
@@ -58,6 +72,11 @@ const App = () => (
                     <ProtectedRoute>
                       <Orders />
                     </ProtectedRoute>
+                  } />
+                  <Route path="/owner" element={
+                    <OwnerRoute>
+                      <Owner />
+                    </OwnerRoute>
                   } />
                   <Route path="/auth" element={<Auth />} />
                   <Route path="*" element={<NotFound />} />

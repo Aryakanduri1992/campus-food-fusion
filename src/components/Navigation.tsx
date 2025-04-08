@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Home, ShoppingCart, ClipboardList, User, LogOut, LogIn } from 'lucide-react';
+import { Home, ShoppingCart, ClipboardList, User, LogOut, LogIn, Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useCart } from '@/context/CartContext';
 import { useAuth } from '@/context/AuthContext';
@@ -16,6 +16,8 @@ const Navigation: React.FC = () => {
   const isActive = (path: string) => {
     return location.pathname === path;
   };
+
+  const isOwner = user?.email === 'aryaprasad771@gmail.com';
 
   const handleSignOut = async () => {
     try {
@@ -68,6 +70,13 @@ const Navigation: React.FC = () => {
               <span>My Orders</span>
             </Link>
             
+            {isOwner && (
+              <Link to="/owner" className={`flex items-center space-x-2 ${isActive('/owner') ? 'text-rv-gold' : 'hover:text-rv-gold'}`}>
+                <Settings size={20} />
+                <span>Owner Dashboard</span>
+              </Link>
+            )}
+            
             {user ? (
               <Button 
                 variant="ghost" 
@@ -113,6 +122,14 @@ const Navigation: React.FC = () => {
               <User size={20} />
               <span className="text-xs">Orders</span>
             </Link>
+            
+            {isOwner && (
+              <Link to="/owner" className={`flex flex-col items-center ${isActive('/owner') ? 'text-rv-gold' : ''}`}>
+                <Settings size={20} />
+                <span className="text-xs">Owner</span>
+              </Link>
+            )}
+            
             {user ? (
               <button 
                 onClick={handleSignOut}
