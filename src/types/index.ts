@@ -59,6 +59,15 @@ export interface DbOrderItem {
   created_at: string;
 }
 
+// Delivery partner type
+export interface DeliveryPartner {
+  id: string;
+  name: string;
+  phone: string;
+  email: string;
+  status: 'Available' | 'Busy';
+}
+
 // Type safety for all database tables
 export type Database = {
   public: {

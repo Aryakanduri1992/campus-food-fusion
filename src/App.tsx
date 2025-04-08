@@ -14,6 +14,7 @@ import Orders from "@/pages/Orders";
 import Payment from "@/pages/Payment";
 import Location from "@/pages/Location";
 import Owner from "@/pages/Owner";
+import DeliveryPartner from "@/pages/DeliveryPartner";
 import Auth from "@/pages/Auth";
 import NotFound from "@/pages/NotFound";
 
@@ -39,6 +40,21 @@ const OwnerRoute = ({ children }: { children: React.ReactNode }) => {
   if (!user) return <Navigate to="/auth" replace />;
   
   if (user.email !== 'aryaprasad771@gmail.com') return <Navigate to="/" replace />;
+  
+  return <>{children}</>;
+};
+
+// Delivery partner route - for delivery partner accounts
+const DeliveryPartnerRoute = ({ children }: { children: React.ReactNode }) => {
+  const { user, loading } = useAuth();
+  
+  if (loading) return <div className="flex items-center justify-center h-screen">Loading...</div>;
+  
+  if (!user) return <Navigate to="/auth" replace />;
+  
+  // In a real application, check if the user is a delivery partner
+  // For now, we'll use a simple check to make sure it's not the owner
+  if (user.email === 'aryaprasad771@gmail.com') return <Navigate to="/owner" replace />;
   
   return <>{children}</>;
 };
@@ -77,6 +93,11 @@ const App = () => (
                     <OwnerRoute>
                       <Owner />
                     </OwnerRoute>
+                  } />
+                  <Route path="/delivery" element={
+                    <DeliveryPartnerRoute>
+                      <DeliveryPartner />
+                    </DeliveryPartnerRoute>
                   } />
                   <Route path="/auth" element={<Auth />} />
                   <Route path="*" element={<NotFound />} />

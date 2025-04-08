@@ -41,6 +41,7 @@ interface OrderWithItems {
   items: any[]; // Order items
   delivery_partner?: string;
   delivery_phone?: string;
+  delivery_email?: string;
   estimated_time?: string;
 }
 
@@ -48,6 +49,7 @@ interface DeliveryPartner {
   id: string;
   name: string;
   phone: string;
+  email: string;
   status: 'Available' | 'Busy';
 }
 
@@ -58,11 +60,11 @@ const Owner = () => {
   const [loading, setLoading] = useState(true);
   const [orders, setOrders] = useState<OrderWithItems[]>([]);
   const [partners, setPartners] = useState<DeliveryPartner[]>([
-    { id: '1', name: 'Rahul Kumar', phone: '9876543210', status: 'Available' },
-    { id: '2', name: 'Amit Singh', phone: '8765432109', status: 'Available' },
-    { id: '3', name: 'Priya Sharma', phone: '7654321098', status: 'Busy' }
+    { id: '1', name: 'Rahul Kumar', phone: '9876543210', email: 'rahul@example.com', status: 'Available' },
+    { id: '2', name: 'Amit Singh', phone: '8765432109', email: 'amit@example.com', status: 'Available' },
+    { id: '3', name: 'Priya Sharma', phone: '7654321098', email: 'priya@example.com', status: 'Busy' }
   ]);
-  const [newPartner, setNewPartner] = useState({ name: '', phone: '' });
+  const [newPartner, setNewPartner] = useState({ name: '', phone: '', email: '' });
   const [selectedOrder, setSelectedOrder] = useState<string | null>(null);
   const [selectedPartner, setSelectedPartner] = useState<string | null>(null);
   const [estimatedTime, setEstimatedTime] = useState('30-45 minutes');
@@ -146,6 +148,7 @@ const Owner = () => {
               status: 'In Process',
               delivery_partner: partner?.name,
               delivery_phone: partner?.phone,
+              delivery_email: partner?.email,
               estimated_time: estimatedTime
             };
           }
@@ -167,6 +170,7 @@ const Owner = () => {
       //   status: 'In Process',
       //   delivery_partner: partner.name,
       //   delivery_phone: partner.phone,
+      //   delivery_email: partner.email,
       //   estimated_time: estimatedTime
       // }).eq('id', selectedOrder);
 
@@ -216,10 +220,10 @@ const Owner = () => {
   };
 
   const addNewPartner = () => {
-    if (!newPartner.name || !newPartner.phone) {
+    if (!newPartner.name || !newPartner.phone || !newPartner.email) {
       toast({
         title: "Missing Information",
-        description: "Please enter both name and phone number",
+        description: "Please enter name, phone number, and email",
         variant: "destructive"
       });
       return;
@@ -229,11 +233,12 @@ const Owner = () => {
     setPartners([...partners, { 
       id, 
       name: newPartner.name, 
-      phone: newPartner.phone, 
+      phone: newPartner.phone,
+      email: newPartner.email,
       status: 'Available' 
     }]);
 
-    setNewPartner({ name: '', phone: '' });
+    setNewPartner({ name: '', phone: '', email: '' });
     
     toast({
       title: "Partner Added",
@@ -357,7 +362,7 @@ const Owner = () => {
                         .filter(partner => partner.status === 'Available')
                         .map(partner => (
                           <SelectItem key={partner.id} value={partner.id}>
-                            {partner.name} ({partner.phone})
+                            {partner.name} ({partner.phone}) - {partner.email}
                           </SelectItem>
                         ))}
                     </SelectContent>
@@ -471,6 +476,17 @@ const Owner = () => {
                   />
                 </div>
                 
+                <div className="space-y-2">
+                  <Label htmlFor="partner-email">Email Address</Label>
+                  <Input 
+                    id="partner-email" 
+                    type="email"
+                    placeholder="Email address" 
+                    value={newPartner.email}
+                    onChange={(e) => setNewPartner({...newPartner, email: e.target.value})}
+                  />
+                </div>
+                
                 <Button 
                   className="w-full bg-rv-burgundy hover:bg-rv-burgundy/90 mt-4"
                   onClick={addNewPartner}
@@ -491,6 +507,7 @@ const Owner = () => {
                     <TableRow>
                       <TableHead>Name</TableHead>
                       <TableHead>Phone</TableHead>
+                      <TableHead>Email</TableHead>
                       <TableHead>Status</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -499,6 +516,7 @@ const Owner = () => {
                       <TableRow key={partner.id}>
                         <TableCell className="font-medium">{partner.name}</TableCell>
                         <TableCell>{partner.phone}</TableCell>
+                        <TableCell>{partner.email}</TableCell>
                         <TableCell>
                           <span className={`px-2 py-1 rounded text-xs font-semibold
                             ${partner.status === 'Available' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>

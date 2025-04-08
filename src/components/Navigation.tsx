@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Home, ShoppingCart, ClipboardList, User, LogOut, LogIn, Settings } from 'lucide-react';
+import { Home, ShoppingCart, ClipboardList, User, LogOut, LogIn, Settings, Truck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useCart } from '@/context/CartContext';
 import { useAuth } from '@/context/AuthContext';
@@ -18,6 +18,9 @@ const Navigation: React.FC = () => {
   };
 
   const isOwner = user?.email === 'aryaprasad771@gmail.com';
+  // In a real app, you would check if the user is a delivery partner
+  // For now, we'll consider any logged-in user who is not the owner as a potential delivery partner
+  const isDeliveryPartner = user && !isOwner;
 
   const handleSignOut = async () => {
     try {
@@ -77,6 +80,13 @@ const Navigation: React.FC = () => {
               </Link>
             )}
             
+            {isDeliveryPartner && (
+              <Link to="/delivery" className={`flex items-center space-x-2 ${isActive('/delivery') ? 'text-rv-gold' : 'hover:text-rv-gold'}`}>
+                <Truck size={20} />
+                <span>Delivery Dashboard</span>
+              </Link>
+            )}
+            
             {user ? (
               <Button 
                 variant="ghost" 
@@ -118,15 +128,21 @@ const Navigation: React.FC = () => {
               </div>
               <span className="text-xs">Cart</span>
             </Link>
-            <Link to="/orders" className={`flex flex-col items-center ${isActive('/orders') ? 'text-rv-gold' : ''}`}>
-              <User size={20} />
-              <span className="text-xs">Orders</span>
-            </Link>
             
-            {isOwner && (
+            {isOwner ? (
               <Link to="/owner" className={`flex flex-col items-center ${isActive('/owner') ? 'text-rv-gold' : ''}`}>
                 <Settings size={20} />
                 <span className="text-xs">Owner</span>
+              </Link>
+            ) : isDeliveryPartner ? (
+              <Link to="/delivery" className={`flex flex-col items-center ${isActive('/delivery') ? 'text-rv-gold' : ''}`}>
+                <Truck size={20} />
+                <span className="text-xs">Delivery</span>
+              </Link>
+            ) : (
+              <Link to="/orders" className={`flex flex-col items-center ${isActive('/orders') ? 'text-rv-gold' : ''}`}>
+                <User size={20} />
+                <span className="text-xs">Orders</span>
               </Link>
             )}
             
