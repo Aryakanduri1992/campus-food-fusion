@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -8,6 +9,7 @@ import { toast } from 'sonner';
 import AuthHeader from '@/components/AuthHeader';
 import { useAuth } from '@/context/AuthContext';
 import DeliveryTracking from '@/components/DeliveryTracking';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 const Payment: React.FC = () => {
   const navigate = useNavigate();
@@ -24,8 +26,10 @@ const Payment: React.FC = () => {
     cvv: ''
   });
   
+  const [upiId, setUpiId] = useState('9113950544@upi');
   const [loading, setLoading] = useState(false);
   const [orderPlaced, setOrderPlaced] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState('card');
   
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -79,24 +83,26 @@ const Payment: React.FC = () => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!paymentDetails.cardName.trim()) {
-      toast.error('Please enter cardholder name');
-      return;
-    }
-    
-    if (paymentDetails.cardNumber.replace(/\s/g, '').length !== 16) {
-      toast.error('Please enter a valid 16-digit card number');
-      return;
-    }
-    
-    if (!paymentDetails.expiryDate.includes('/')) {
-      toast.error('Please enter a valid expiry date (MM/YY)');
-      return;
-    }
-    
-    if (paymentDetails.cvv.length !== 3) {
-      toast.error('Please enter a valid 3-digit CVV');
-      return;
+    if (paymentMethod === 'card') {
+      if (!paymentDetails.cardName.trim()) {
+        toast.error('Please enter cardholder name');
+        return;
+      }
+      
+      if (paymentDetails.cardNumber.replace(/\s/g, '').length !== 16) {
+        toast.error('Please enter a valid 16-digit card number');
+        return;
+      }
+      
+      if (!paymentDetails.expiryDate.includes('/')) {
+        toast.error('Please enter a valid expiry date (MM/YY)');
+        return;
+      }
+      
+      if (paymentDetails.cvv.length !== 3) {
+        toast.error('Please enter a valid 3-digit CVV');
+        return;
+      }
     }
     
     setLoading(true);
@@ -189,81 +195,117 @@ const Payment: React.FC = () => {
               <p className="text-sm">{locationData.city}, {locationData.pincode}</p>
             </div>
             
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="cardName">Cardholder Name</Label>
-                <Input 
-                  id="cardName" 
-                  name="cardName" 
-                  placeholder="Enter cardholder name"
-                  value={paymentDetails.cardName}
-                  onChange={handleInputChange}
-                  required
-                />
-              </div>
+            <Tabs defaultValue="card" className="w-full mb-4" onValueChange={setPaymentMethod}>
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="card">Credit/Debit Card</TabsTrigger>
+                <TabsTrigger value="upi">UPI Payment</TabsTrigger>
+              </TabsList>
               
-              <div className="space-y-2">
-                <Label htmlFor="cardNumber">Card Number</Label>
-                <Input
-                  id="cardNumber"
-                  name="cardNumber"
-                  placeholder="1234 5678 9012 3456"
-                  value={paymentDetails.cardNumber}
-                  onChange={handleCardNumberChange}
-                  required
-                />
-              </div>
+              <TabsContent value="card">
+                <form onSubmit={handleSubmit} className="space-y-4 mt-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="cardName">Cardholder Name</Label>
+                    <Input 
+                      id="cardName" 
+                      name="cardName" 
+                      placeholder="Enter cardholder name"
+                      value={paymentDetails.cardName}
+                      onChange={handleInputChange}
+                      required
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="cardNumber">Card Number</Label>
+                    <Input
+                      id="cardNumber"
+                      name="cardNumber"
+                      placeholder="1234 5678 9012 3456"
+                      value={paymentDetails.cardNumber}
+                      onChange={handleCardNumberChange}
+                      required
+                    />
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="expiryDate">Expiry Date</Label>
+                      <Input
+                        id="expiryDate"
+                        name="expiryDate"
+                        placeholder="MM/YY"
+                        value={paymentDetails.expiryDate}
+                        onChange={handleExpiryDateChange}
+                        required
+                      />
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="cvv">CVV</Label>
+                      <Input
+                        id="cvv"
+                        name="cvv"
+                        placeholder="123"
+                        type="password"
+                        value={paymentDetails.cvv}
+                        onChange={handleCvvChange}
+                        required
+                      />
+                    </div>
+                  </div>
+                  
+                  <Button 
+                    type="submit"
+                    className="w-full bg-rv-navy hover:bg-rv-burgundy"
+                    disabled={loading}
+                  >
+                    {loading ? 'Processing...' : 'Pay ₹'+totalAmount.toFixed(2)}
+                  </Button>
+                </form>
+              </TabsContent>
               
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="expiryDate">Expiry Date</Label>
-                  <Input
-                    id="expiryDate"
-                    name="expiryDate"
-                    placeholder="MM/YY"
-                    value={paymentDetails.expiryDate}
-                    onChange={handleExpiryDateChange}
-                    required
-                  />
+              <TabsContent value="upi">
+                <div className="space-y-4 mt-4">
+                  <div className="p-4 bg-gray-50 rounded-md text-center">
+                    <p className="font-semibold mb-2">UPI Payment</p>
+                    <p className="text-lg font-bold my-3">{upiId}</p>
+                    <p className="text-sm text-gray-600 mb-3">Please use the UPI ID above to make your payment of ₹{totalAmount.toFixed(2)}</p>
+                    <div className="bg-white p-4 rounded-md border border-gray-200 max-w-xs mx-auto mb-3">
+                      <div className="text-center">
+                        <div className="text-lg font-bold">Scan QR Code</div>
+                        <div className="h-48 flex items-center justify-center border border-dashed border-gray-300 mt-2 mb-2">
+                          <p className="text-sm text-gray-500">QR Code Placeholder</p>
+                        </div>
+                      </div>
+                    </div>
+                    <p className="text-sm text-gray-600">After completing the payment, click the button below</p>
+                  </div>
+                  
+                  <Button 
+                    onClick={handleSubmit}
+                    className="w-full bg-green-600 hover:bg-green-700"
+                    disabled={loading}
+                  >
+                    {loading ? 'Verifying...' : 'I\'ve Completed the Payment'}
+                  </Button>
                 </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="cvv">CVV</Label>
-                  <Input
-                    id="cvv"
-                    name="cvv"
-                    placeholder="123"
-                    type="password"
-                    value={paymentDetails.cvv}
-                    onChange={handleCvvChange}
-                    required
-                  />
-                </div>
-              </div>
-              
-              <Button 
-                type="submit"
-                className="w-full bg-rv-navy hover:bg-rv-burgundy"
-                disabled={loading}
-              >
-                {loading ? 'Processing...' : 'Pay ₹'+totalAmount.toFixed(2)}
-              </Button>
-              
-              <Button 
-                type="button"
-                variant="outline"
-                className="w-full mt-2"
-                onClick={() => navigate('/location', { 
-                  state: { 
-                    orderId: orderId,
-                    totalAmount: totalAmount
-                  } 
-                })}
-                disabled={loading}
-              >
-                Back to Delivery Details
-              </Button>
-            </form>
+              </TabsContent>
+            </Tabs>
+            
+            <Button 
+              type="button"
+              variant="outline"
+              className="w-full mt-2"
+              onClick={() => navigate('/location', { 
+                state: { 
+                  orderId: orderId,
+                  totalAmount: totalAmount
+                } 
+              })}
+              disabled={loading}
+            >
+              Back to Delivery Details
+            </Button>
           </CardContent>
         </Card>
       </div>

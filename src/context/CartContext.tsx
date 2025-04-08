@@ -1,4 +1,3 @@
-
 import React, { createContext, useState, useContext, ReactNode, useEffect } from 'react';
 import { CartItem, FoodItem, DbCartItem, DbOrderItem, Database, FoodCategory } from '../types';
 import { toast } from "sonner";
@@ -193,7 +192,6 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setCart([]);
     
     if (user && cartId) {
-      // Fix: Properly handle the Promise
       (async () => {
         try {
           const { error } = await supabase
