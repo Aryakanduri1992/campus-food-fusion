@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
@@ -257,7 +258,7 @@ const Owner = () => {
       if (order?.delivery_partner) {
         setPartners(prevPartners => 
           prevPartners.map(partner => 
-            partner.name === order.delivery_partner 
+            partner.partner_name === order.delivery_partner 
               ? { ...partner, status: 'Available' as const } 
               : partner
           )
@@ -491,7 +492,7 @@ const Owner = () => {
                         .filter(partner => partner.status === 'Available')
                         .map(partner => (
                           <SelectItem key={partner.id} value={partner.id}>
-                            {partner.name} ({partner.phone}) - {partner.email}
+                            {partner.partner_name} ({partner.phone_number}) - {partner.email}
                           </SelectItem>
                         ))}
                     </SelectContent>
