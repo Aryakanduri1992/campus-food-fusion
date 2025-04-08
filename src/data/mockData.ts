@@ -1,4 +1,3 @@
-
 import { FoodItem, CartItem, Order } from '../types';
 
 // Mock food data
@@ -80,34 +79,49 @@ export const mockFoodItems: FoodItem[] = [
 // Mock past orders
 export const mockOrders: Order[] = [
   {
-    id: "order1",
+    id: 1,
     items: [
-      { foodItem: mockFoodItems[0], quantity: 1 },
-      { foodItem: mockFoodItems[4], quantity: 1 },
+      {
+        foodItem: mockFoodItems[0],
+        quantity: 2
+      },
+      {
+        foodItem: mockFoodItems[3],
+        quantity: 1
+      }
     ],
-    totalPrice: 10.98,
-    status: 'Delivered',
-    timestamp: '2025-04-05T14:30:00Z',
+    totalPrice: 599.0,
+    status: 'Delivered' as OrderStatus,
+    timestamp: '2023-04-15T14:30:00.000Z'
   },
   {
-    id: "order2",
+    id: 2,
     items: [
-      { foodItem: mockFoodItems[2], quantity: 1 },
-      { foodItem: mockFoodItems[5], quantity: 2 },
+      {
+        foodItem: mockFoodItems[2],
+        quantity: 1
+      },
+      {
+        foodItem: mockFoodItems[5],
+        quantity: 3
+      }
     ],
-    totalPrice: 12.97,
-    status: 'In Process',
-    timestamp: '2025-04-06T12:15:00Z',
+    totalPrice: 849.5,
+    status: 'In Process' as OrderStatus,
+    timestamp: '2023-04-16T11:20:00.000Z'
   },
   {
-    id: "order3",
+    id: 3,
     items: [
-      { foodItem: mockFoodItems[7], quantity: 1 },
+      {
+        foodItem: mockFoodItems[1],
+        quantity: 2
+      }
     ],
-    totalPrice: 11.99,
-    status: 'Placed',
-    timestamp: '2025-04-07T09:45:00Z',
-  },
+    totalPrice: 320.0,
+    status: 'Placed' as OrderStatus,
+    timestamp: '2023-04-16T18:45:00.000Z'
+  }
 ];
 
 // Get food items by category

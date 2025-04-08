@@ -5,8 +5,8 @@ import { Badge } from '@/components/ui/badge';
 import { formatDistanceToNow } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/AuthContext';
-import { Order, OrderStatus, DbOrderItem, FoodCategory } from '@/types';
-import { ShoppingBag } from 'lucide-react';
+import { Order, OrderStatus, FoodCategory } from '@/types';
+import { ShoppingBag, Truck, Clock, Phone } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
 
@@ -62,7 +62,10 @@ const Orders: React.FC = () => {
                     category: 'Veg' as FoodCategory, // Default as it's not stored
                     description: '' // Default as it's not stored
                   }
-                }))
+                })),
+                deliveryPartner: order.delivery_partner,
+                deliveryPhone: order.delivery_phone,
+                estimatedTime: order.estimated_time
               };
             })
           );
@@ -171,6 +174,30 @@ const Orders: React.FC = () => {
                     <span>₹{order.totalPrice.toFixed(2)}</span>
                   </div>
                 </div>
+
+                {order.status === 'In Process' && order.deliveryPartner && (
+                  <div className="mt-4 p-4 bg-amber-50 rounded-md border border-amber-200">
+                    <h3 className="font-semibold text-amber-800 mb-2">Delivery Information</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                      <div className="flex items-center">
+                        <Truck className="h-4 w-4 mr-2 text-amber-700" />
+                        <span className="text-sm">{order.deliveryPartner}</span>
+                      </div>
+                      {order.deliveryPhone && (
+                        <div className="flex items-center">
+                          <Phone className="h-4 w-4 mr-2 text-amber-700" />
+                          <span className="text-sm">{order.deliveryPhone}</span>
+                        </div>
+                      )}
+                      {order.estimatedTime && (
+                        <div className="flex items-center">
+                          <Clock className="h-4 w-4 mr-2 text-amber-700" />
+                          <span className="text-sm">{order.estimatedTime}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>

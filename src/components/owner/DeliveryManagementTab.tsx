@@ -60,25 +60,51 @@ const DeliveryManagementTab: React.FC<DeliveryManagementTabProps> = ({
         return;
       }
       
-      const { error: updateError } = await supabase
-        .from('orders')
-        .update({ 
-          status: 'In Process',
-          delivery_partner: partner.partner_name,
-          delivery_phone: partner.phone_number,
-          delivery_email: partner.email,
-          estimated_time: estimatedTime
-        })
-        .eq('id', selectedOrder);
+      try {
+        const response = await fetch(
+          'https://onimdyizdngyeyzsvuym.supabase.co/functions/v1/order-management',
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${supabase.auth.getSession().then(res => res.data.session?.access_token)}`
+            },
+            body: JSON.stringify({
+              action: 'assignDeliveryPartner',
+              data: {
+                orderId: selectedOrder,
+                partnerId: selectedPartner,
+                estimatedTime: estimatedTime
+              }
+            })
+          }
+        );
         
-      if (updateError) {
-        console.error('Error updating order:', updateError);
-        toast({
-          title: "Error",
-          description: "Failed to update order status in database",
-          variant: "destructive"
-        });
-        return;
+        if (!response.ok) {
+          throw new Error('Edge function failed');
+        }
+        
+        const result = await response.json();
+        console.log('Edge function response:', result);
+        
+      } catch (edgeFunctionError) {
+        console.error('Edge function error, falling back to direct update:', edgeFunctionError);
+        
+        const { error: updateError } = await supabase
+          .from('orders')
+          .update({ 
+            status: 'In Process',
+            delivery_partner: partner.partner_name,
+            delivery_phone: partner.phone_number,
+            delivery_email: partner.email,
+            estimated_time: estimatedTime
+          })
+          .eq('id', selectedOrder);
+          
+        if (updateError) {
+          console.error('Error updating order:', updateError);
+          throw updateError;
+        }
       }
 
       setOrders(prevOrders => 
@@ -124,21 +150,46 @@ const DeliveryManagementTab: React.FC<DeliveryManagementTabProps> = ({
 
   const handleCompleteOrder = async (orderId: number) => {
     try {
-      const { error: updateError } = await supabase
-        .from('orders')
-        .update({ 
-          status: 'Delivered'
-        })
-        .eq('id', orderId);
+      try {
+        const response = await fetch(
+          'https://onimdyizdngyeyzsvuym.supabase.co/functions/v1/order-management',
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${supabase.auth.getSession().then(res => res.data.session?.access_token)}`
+            },
+            body: JSON.stringify({
+              action: 'updateOrderStatus',
+              data: {
+                orderId: orderId,
+                status: 'Delivered'
+              }
+            })
+          }
+        );
         
-      if (updateError) {
-        console.error('Error updating order:', updateError);
-        toast({
-          title: "Error",
-          description: "Failed to update order status in database",
-          variant: "destructive"
-        });
-        return;
+        if (!response.ok) {
+          throw new Error('Edge function failed');
+        }
+        
+        const result = await response.json();
+        console.log('Edge function response:', result);
+        
+      } catch (edgeFunctionError) {
+        console.error('Edge function error, falling back to direct update:', edgeFunctionError);
+        
+        const { error: updateError } = await supabase
+          .from('orders')
+          .update({ 
+            status: 'Delivered'
+          })
+          .eq('id', orderId);
+          
+        if (updateError) {
+          console.error('Error updating order:', updateError);
+          throw updateError;
+        }
       }
       
       setOrders(prevOrders => 

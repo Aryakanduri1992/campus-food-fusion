@@ -1,4 +1,3 @@
-
 // Food item types
 export type FoodCategory = 'Veg' | 'Non-Veg' | 'Beverage';
 
@@ -26,6 +25,10 @@ export interface Order {
   totalPrice: number;
   status: OrderStatus;
   timestamp: string;
+  deliveryPartner?: string;
+  deliveryPhone?: string;
+  deliveryEmail?: string;
+  estimatedTime?: string;
 }
 
 // User role type
