@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -8,8 +9,9 @@ import { useToast } from '@/hooks/use-toast';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from '@/context/AuthContext';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Mail, AlertCircle } from 'lucide-react';
 import AuthHeader from '@/components/AuthHeader';
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 const Auth = () => {
   const [email, setEmail] = useState('');
@@ -18,6 +20,7 @@ const Auth = () => {
   const [lastName, setLastName] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
   const [loading, setLoading] = useState(false);
+  const [emailNotConfirmed, setEmailNotConfirmed] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user } = useAuth();
@@ -42,6 +45,7 @@ const Auth = () => {
 
     try {
       setLoading(true);
+      setEmailNotConfirmed(false);
       
       const { data, error } = await supabase.auth.signUp({
         email,
@@ -87,13 +91,20 @@ const Auth = () => {
 
     try {
       setLoading(true);
+      setEmailNotConfirmed(false);
       
       const { error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
-      if (error) throw error;
+      if (error) {
+        if (error.message.includes("Email not confirmed")) {
+          setEmailNotConfirmed(true);
+          throw new Error("Please verify your email before logging in. Check your inbox and spam folder.");
+        }
+        throw error;
+      }
       
       toast({
         title: "Success",
@@ -103,6 +114,40 @@ const Auth = () => {
       toast({
         title: "Error",
         description: error.message || "Invalid login credentials",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const resendConfirmationEmail = async () => {
+    if (!email) {
+      toast({
+        title: "Error",
+        description: "Please enter your email address",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const { error } = await supabase.auth.resend({
+        type: 'signup',
+        email,
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Email sent",
+        description: "Verification email has been resent. Please check your inbox and spam folder.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Could not resend verification email",
         variant: "destructive",
       });
     } finally {
@@ -129,6 +174,23 @@ const Auth = () => {
               </CardDescription>
             </CardHeader>
             <CardContent>
+              {emailNotConfirmed && (
+                <Alert variant="destructive" className="mb-4">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertTitle>Email not verified</AlertTitle>
+                  <AlertDescription>
+                    Please verify your email before logging in. 
+                    <Button 
+                      variant="link" 
+                      onClick={resendConfirmationEmail}
+                      disabled={loading}
+                      className="p-0 h-auto font-semibold"
+                    >
+                      Resend verification email
+                    </Button>
+                  </AlertDescription>
+                </Alert>
+              )}
               <form onSubmit={handleSignIn} className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="email">Email</Label>
