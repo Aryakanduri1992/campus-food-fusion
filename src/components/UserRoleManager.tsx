@@ -46,7 +46,7 @@ const UserRoleManager: React.FC<UserRoleManagerProps> = ({ onRoleAssigned }) => 
       // Get all delivery partner roles
       const { data: roleData, error: roleError } = await supabase
         .from('user_roles')
-        .select('id, role, created_at')
+        .select('id, user_id, role, created_at')
         .eq('role', 'delivery_partner');
         
       if (roleError) {
@@ -59,8 +59,7 @@ const UserRoleManager: React.FC<UserRoleManagerProps> = ({ onRoleAssigned }) => 
         return;
       }
       
-      // The delivery_partners_emails table is now in the types but we still need to properly 
-      // handle the response typing
+      // Fetch the delivery partners' emails
       const { data: emailData, error: emailError } = await supabase
         .from('delivery_partners_emails')
         .select('*');
@@ -76,7 +75,6 @@ const UserRoleManager: React.FC<UserRoleManagerProps> = ({ onRoleAssigned }) => 
       if (roleData) {
         partnersData = roleData.map(role => {
           // Try to find the email from our delivery_partners_emails table
-          // We need to ensure emailData is treated as an array of objects with role_id and email properties
           const emailEntry = emailData ? 
             emailData.find((e: { role_id: string, email: string }) => e.role_id === role.id) : 
             null;
@@ -89,6 +87,7 @@ const UserRoleManager: React.FC<UserRoleManagerProps> = ({ onRoleAssigned }) => 
         });
       }
       
+      console.log("Fetched delivery partners:", partnersData);
       setDeliveryPartners(partnersData);
     } catch (error) {
       console.error("Unexpected error fetching delivery partners:", error);
@@ -128,18 +127,32 @@ const UserRoleManager: React.FC<UserRoleManagerProps> = ({ onRoleAssigned }) => 
         return;
       }
 
+      console.log("Role assigned successfully");
+      
+      // Try to get the user_id from auth users
+      const { data: userData, error: userError } = await supabase.auth.admin.getUserByEmail(email);
+      let userId = null;
+      
+      if (userError) {
+        console.error("Error fetching user:", userError);
+      } else if (userData) {
+        userId = userData.user.id;
+      }
+      
       // Get the role ID for the newly assigned role
       const { data: newRoleData, error: fetchError } = await supabase
         .from('user_roles')
         .select('id')
         .eq('role', 'delivery_partner')
-        .eq('user_id', await getUserIdFromEmail(email))
+        .eq('user_id', userId || '')
         .single();
 
       if (fetchError) {
         console.error("Error fetching role ID:", fetchError);
       } else if (newRoleData) {
-        // Now properly handle the type for storing the email in the delivery_partners_emails table
+        console.log("Found role ID:", newRoleData.id);
+        
+        // Store the email in the delivery_partners_emails table
         const { error: insertError } = await supabase
           .from('delivery_partners_emails')
           .insert({
@@ -149,14 +162,17 @@ const UserRoleManager: React.FC<UserRoleManagerProps> = ({ onRoleAssigned }) => 
 
         if (insertError) {
           console.error("Error storing email:", insertError);
+        } else {
+          console.log("Email stored successfully");
         }
       }
 
       // Add to local state for immediate UI update
+      const newId = newRoleData?.id || 'temp-' + Date.now();
       setDeliveryPartners(prev => [
         ...prev,
         {
-          id: newRoleData?.id || 'temp-' + Date.now(),
+          id: newId,
           email: email,
           created_at: new Date().toISOString()
         }
@@ -181,31 +197,6 @@ const UserRoleManager: React.FC<UserRoleManagerProps> = ({ onRoleAssigned }) => 
       });
     } finally {
       setLoading(false);
-    }
-  };
-
-  // Helper function to get user ID from email
-  const getUserIdFromEmail = async (email: string): Promise<string | null> => {
-    try {
-      // We can't query auth.users directly, so use a clever approach
-      const { data, error } = await supabase.auth.signInWithOtp({
-        email,
-        options: {
-          shouldCreateUser: false
-        }
-      });
-
-      // This won't actually log in but might tell us if the user exists
-      if (error && error.status === 400 && error.message.includes("User already registered")) {
-        // User exists - in a real app, you'd use an admin API or a secure RPC
-        // For now, we'll just return a placeholder ID that should be overwritten
-        return 'existing-user';
-      }
-
-      return null;
-    } catch (error) {
-      console.error("Error checking user ID:", error);
-      return null;
     }
   };
 

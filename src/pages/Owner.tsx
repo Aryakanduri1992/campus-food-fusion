@@ -60,11 +60,7 @@ const Owner = () => {
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [orders, setOrders] = useState<OrderWithItems[]>([]);
-  const [partners, setPartners] = useState<DeliveryPartner[]>([
-    { id: '1', name: 'Rahul Kumar', phone: '9876543210', email: 'rahul@example.com', status: 'Available' },
-    { id: '2', name: 'Amit Singh', phone: '8765432109', email: 'amit@example.com', status: 'Available' },
-    { id: '3', name: 'Priya Sharma', phone: '7654321098', email: 'priya@example.com', status: 'Busy' }
-  ]);
+  const [partners, setPartners] = useState<DeliveryPartner[]>([]);
   const [newPartner, setNewPartner] = useState({ name: '', phone: '', email: '' });
   const [selectedOrder, setSelectedOrder] = useState<string | null>(null);
   const [selectedPartner, setSelectedPartner] = useState<string | null>(null);
@@ -83,7 +79,35 @@ const Owner = () => {
     }
 
     fetchOrders();
+    fetchDeliveryPartners();
   }, [user, userRole, navigate]);
+
+  const fetchDeliveryPartners = async () => {
+    try {
+      const { data: emailsData, error: emailsError } = await supabase
+        .from('delivery_partners_emails')
+        .select('*');
+      
+      if (emailsError) {
+        console.error("Error fetching delivery partner emails:", emailsError);
+        return;
+      }
+      
+      // Transform the data into the format we need
+      const formattedPartners: DeliveryPartner[] = emailsData.map((item: any, index: number) => ({
+        id: item.id,
+        name: `Partner ${index + 1}`,
+        phone: '(Phone not available)',
+        email: item.email,
+        status: 'Available' as const
+      }));
+      
+      console.log("Fetched delivery partners:", formattedPartners);
+      setPartners(formattedPartners);
+    } catch (error) {
+      console.error("Unexpected error fetching delivery partners:", error);
+    }
+  };
 
   const fetchOrders = async () => {
     try {
@@ -138,18 +162,47 @@ const Owner = () => {
     }
 
     try {
-      // In a real application, you would update the order with delivery information
-      // Since we don't have those columns yet, we'll update it in our local state
+      // Get the selected partner
+      const partner = partners.find(p => p.id === selectedPartner);
+      
+      if (!partner) {
+        toast({
+          title: "Error",
+          description: "Selected partner not found",
+          variant: "destructive"
+        });
+        return;
+      }
+      
+      // Update the order status in the database
+      const { error: updateError } = await supabase
+        .from('orders')
+        .update({ 
+          status: 'In Process'
+        })
+        .eq('id', selectedOrder);
+        
+      if (updateError) {
+        console.error('Error updating order:', updateError);
+        toast({
+          title: "Error",
+          description: "Failed to update order status in database",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      // In a real app, you would store delivery assignment in a separate table
+      // For now we'll update our local state
       setOrders(prevOrders => 
         prevOrders.map(order => {
           if (order.id === selectedOrder) {
-            const partner = partners.find(p => p.id === selectedPartner);
             return {
               ...order,
               status: 'In Process',
-              delivery_partner: partner?.name,
-              delivery_phone: partner?.phone,
-              delivery_email: partner?.email,
+              delivery_partner: partner.name,
+              delivery_phone: partner.phone,
+              delivery_email: partner.email,
               estimated_time: estimatedTime
             };
           }
@@ -159,21 +212,12 @@ const Owner = () => {
 
       // Update partner status
       setPartners(prevPartners => 
-        prevPartners.map(partner => 
-          partner.id === selectedPartner 
-            ? { ...partner, status: 'Busy' as const } 
-            : partner
+        prevPartners.map(p => 
+          p.id === selectedPartner 
+            ? { ...p, status: 'Busy' as const } 
+            : p
         )
       );
-
-      // In a real app, you would update this in the database
-      // await supabase.from('orders').update({ 
-      //   status: 'In Process',
-      //   delivery_partner: partner.name,
-      //   delivery_phone: partner.phone,
-      //   delivery_email: partner.email,
-      //   estimated_time: estimatedTime
-      // }).eq('id', selectedOrder);
 
       toast({
         title: "Delivery Assigned",
@@ -192,35 +236,62 @@ const Owner = () => {
     }
   };
 
-  const handleCompleteOrder = (orderId: string) => {
-    // Mark order as completed
-    setOrders(prevOrders => 
-      prevOrders.map(order => 
-        order.id === orderId 
-          ? { ...order, status: 'Delivered' } 
-          : order
-      )
-    );
-
-    // Free up the delivery partner
-    const order = orders.find(o => o.id === orderId);
-    if (order?.delivery_partner) {
-      setPartners(prevPartners => 
-        prevPartners.map(partner => 
-          partner.name === order.delivery_partner 
-            ? { ...partner, status: 'Available' as const } 
-            : partner
+  const handleCompleteOrder = async (orderId: string) => {
+    try {
+      // Update order status in the database
+      const { error: updateError } = await supabase
+        .from('orders')
+        .update({ 
+          status: 'Delivered'
+        })
+        .eq('id', orderId);
+        
+      if (updateError) {
+        console.error('Error updating order:', updateError);
+        toast({
+          title: "Error",
+          description: "Failed to update order status in database",
+          variant: "destructive"
+        });
+        return;
+      }
+      
+      // Mark order as completed in local state
+      setOrders(prevOrders => 
+        prevOrders.map(order => 
+          order.id === orderId 
+            ? { ...order, status: 'Delivered' } 
+            : order
         )
       );
-    }
 
-    toast({
-      title: "Order Completed",
-      description: "The order has been marked as delivered",
-    });
+      // Free up the delivery partner
+      const order = orders.find(o => o.id === orderId);
+      if (order?.delivery_partner) {
+        setPartners(prevPartners => 
+          prevPartners.map(partner => 
+            partner.name === order.delivery_partner 
+              ? { ...partner, status: 'Available' as const } 
+              : partner
+          )
+        );
+      }
+
+      toast({
+        title: "Order Completed",
+        description: "The order has been marked as delivered",
+      });
+    } catch (error) {
+      console.error('Error completing order:', error);
+      toast({
+        title: "Error",
+        description: "Failed to mark order as delivered",
+        variant: "destructive"
+      });
+    }
   };
 
-  const addNewPartner = () => {
+  const addNewPartner = async () => {
     if (!newPartner.name || !newPartner.phone || !newPartner.email) {
       toast({
         title: "Missing Information",
@@ -230,24 +301,56 @@ const Owner = () => {
       return;
     }
 
-    const id = (partners.length + 1).toString();
-    setPartners([...partners, { 
-      id, 
-      name: newPartner.name, 
-      phone: newPartner.phone,
-      email: newPartner.email,
-      status: 'Available' 
-    }]);
+    try {
+      // First, create a placeholder entry in delivery_partners_emails
+      const { data: insertData, error: insertError } = await supabase
+        .from('delivery_partners_emails')
+        .insert({
+          email: newPartner.email
+        })
+        .select();
+        
+      if (insertError) {
+        console.error('Error adding delivery partner:', insertError);
+        toast({
+          title: "Error",
+          description: "Failed to add delivery partner to database",
+          variant: "destructive"
+        });
+        return;
+      }
+      
+      const newId = insertData?.[0]?.id || (partners.length + 1).toString();
+      
+      // Add to local state
+      setPartners([...partners, { 
+        id: newId, 
+        name: newPartner.name, 
+        phone: newPartner.phone,
+        email: newPartner.email,
+        status: 'Available' 
+      }]);
 
-    setNewPartner({ name: '', phone: '', email: '' });
-    
-    toast({
-      title: "Partner Added",
-      description: "New delivery partner has been added",
-    });
+      setNewPartner({ name: '', phone: '', email: '' });
+      
+      toast({
+        title: "Partner Added",
+        description: "New delivery partner has been added",
+      });
+    } catch (error) {
+      console.error('Error adding partner:', error);
+      toast({
+        title: "Error",
+        description: "Failed to add delivery partner",
+        variant: "destructive"
+      });
+    }
   };
 
   const handleRoleAssigned = () => {
+    // Refresh the delivery partners list
+    fetchDeliveryPartners();
+    
     toast({
       title: "Role Updated",
       description: "Delivery partner role has been assigned. User can now log in as a delivery partner.",
@@ -258,7 +361,7 @@ const Owner = () => {
     try {
       // Use the assign_role RPC function we created in the SQL migration
       const { error } = await supabase
-        .rpc('assign_role' as any, { 
+        .rpc('assign_role', { 
           user_email: email, 
           assigned_role: 'owner' 
         });
