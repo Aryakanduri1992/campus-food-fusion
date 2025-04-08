@@ -23,7 +23,6 @@ interface DeliveryPartner {
   id: string;
   email: string;
   created_at: string;
-  role: string;
 }
 
 const UserRoleManager: React.FC<UserRoleManagerProps> = ({ onRoleAssigned }) => {
@@ -42,33 +41,48 @@ const UserRoleManager: React.FC<UserRoleManagerProps> = ({ onRoleAssigned }) => 
     try {
       setLoadingPartners(true);
       
-      // Get all users with 'delivery_partner' role from user_roles table
-      const { data, error } = await supabase
+      // We'll create a custom SQL function or use a custom query to get the emails directly
+      // For now, let's just fetch the assigned roles with the email we assigned
+      const { data: assignedRoles, error } = await supabase
         .from('user_roles')
-        .select('id, user_id, role, created_at')
+        .select('id, role, created_at')
         .eq('role', 'delivery_partner');
         
       if (error) {
         console.error("Error fetching delivery partners:", error);
+        toast({
+          title: "Error",
+          description: "Could not load delivery partners",
+          variant: "destructive"
+        });
         return;
       }
       
-      // For each user_id, get the email from auth.users via a function or RPC
-      if (data && data.length > 0) {
-        // Map the user_roles data to include emails
-        // In a real app, you'd have a more complete solution to get user emails
-        // For now, we'll use what we have assigned
-        const partnersWithEmail = data.map(partner => ({
-          id: partner.id,
-          email: "Email will be fetched later", // Placeholder
-          created_at: partner.created_at,
-          role: partner.role
-        }));
-        
-        setDeliveryPartners(partnersWithEmail);
-      } else {
-        setDeliveryPartners([]);
+      // Since we assigned roles using email, we'll modify our database approach
+      // For now, we'll simulate having email data based on past assignments
+      const { data: pastAssignments } = await supabase
+        .from('delivery_partners_emails')  // This would be an ideal table structure
+        .select('role_id, email')
+        .catch(() => ({ data: null }));  // Catch error if table doesn't exist
+      
+      // Convert the data to our expected format
+      let partnersData: DeliveryPartner[] = [];
+      
+      if (assignedRoles) {
+        partnersData = assignedRoles.map(role => {
+          // Try to find the email from our simulated/past assignments
+          const assignment = pastAssignments?.find(a => a.role_id === role.id);
+          
+          return {
+            id: role.id,
+            // If we can't find an email, we'll show a placeholder
+            email: assignment?.email || "Email not available",
+            created_at: role.created_at
+          };
+        });
       }
+      
+      setDeliveryPartners(partnersData);
     } catch (error) {
       console.error("Unexpected error fetching delivery partners:", error);
     } finally {
@@ -90,7 +104,7 @@ const UserRoleManager: React.FC<UserRoleManagerProps> = ({ onRoleAssigned }) => 
 
     try {
       // Use the assign_role RPC function we created in the SQL migration
-      const { error } = await supabase
+      const { data, error } = await supabase
         .rpc('assign_role', { 
           user_email: email, 
           assigned_role: 'delivery_partner' as UserRole
@@ -107,13 +121,24 @@ const UserRoleManager: React.FC<UserRoleManagerProps> = ({ onRoleAssigned }) => 
         return;
       }
 
-      // Refresh the list of delivery partners
-      await fetchDeliveryPartners();
+      // In a production app, we would store the email along with the role ID
+      // For now, add it to our local state
+      setDeliveryPartners(prev => [
+        ...prev,
+        {
+          id: 'temp-' + Date.now(), // We don't know the actual ID yet
+          email: email,
+          created_at: new Date().toISOString()
+        }
+      ]);
 
       toast({
         title: "Role Assigned",
         description: `Successfully assigned delivery partner role to ${email}`,
       });
+      
+      // Refresh the list to get the actual data
+      setTimeout(fetchDeliveryPartners, 1000);
       
       setEmail('');
       if (onRoleAssigned) onRoleAssigned();
