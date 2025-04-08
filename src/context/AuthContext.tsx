@@ -12,6 +12,7 @@ type AuthContextType = {
   loading: boolean;
   signOut: () => Promise<void>;
   checkUserRole: () => Promise<UserRole | null>;
+  refreshUserRole: () => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextType>({
@@ -21,6 +22,7 @@ const AuthContext = createContext<AuthContextType>({
   loading: true,
   signOut: async () => {},
   checkUserRole: async () => null,
+  refreshUserRole: async () => {},
 });
 
 export const useAuth = () => useContext(AuthContext);
@@ -55,6 +57,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch (error) {
       console.error('Unexpected error checking user role:', error);
       return null;
+    }
+  };
+
+  // New function to refresh user role explicitly
+  const refreshUserRole = async (): Promise<void> => {
+    if (user) {
+      const role = await checkUserRole();
+      console.log('User role after manual refresh:', role);
+      setUserRole(role);
     }
   };
 
@@ -114,7 +125,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   return (
-    <AuthContext.Provider value={{ session, user, userRole, loading, signOut, checkUserRole }}>
+    <AuthContext.Provider value={{ 
+      session, 
+      user, 
+      userRole, 
+      loading, 
+      signOut, 
+      checkUserRole,
+      refreshUserRole 
+    }}>
       {children}
     </AuthContext.Provider>
   );

@@ -33,20 +33,40 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 
 // Owner route component - only for users with owner role
 const OwnerRoute = ({ children }: { children: React.ReactNode }) => {
-  const { user, loading, userRole } = useAuth();
+  const { user, loading, userRole, refreshUserRole } = useAuth();
+  
+  // Refresh user role when this component mounts
+  React.useEffect(() => {
+    if (user) {
+      refreshUserRole();
+    }
+  }, [user, refreshUserRole]);
   
   if (loading) return <div className="flex items-center justify-center h-screen">Loading...</div>;
   
   if (!user) return <Navigate to="/auth" replace />;
   
-  if (userRole !== 'owner') return <Navigate to="/" replace />;
+  console.log("OwnerRoute - Current userRole:", userRole);
   
+  if (userRole !== 'owner') {
+    console.log("Access denied: User does not have owner role");
+    return <Navigate to="/" replace />;
+  }
+  
+  console.log("Access granted: User has owner role");
   return <>{children}</>;
 };
 
 // Delivery partner route - for users with delivery_partner role
 const DeliveryPartnerRoute = ({ children }: { children: React.ReactNode }) => {
-  const { user, loading, userRole } = useAuth();
+  const { user, loading, userRole, refreshUserRole } = useAuth();
+  
+  // Refresh user role when this component mounts
+  React.useEffect(() => {
+    if (user) {
+      refreshUserRole();
+    }
+  }, [user, refreshUserRole]);
   
   if (loading) return <div className="flex items-center justify-center h-screen">Loading...</div>;
   

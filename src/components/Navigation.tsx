@@ -10,21 +10,26 @@ import { useToast } from '@/hooks/use-toast';
 const Navigation: React.FC = () => {
   const location = useLocation();
   const { getTotalItems } = useCart();
-  const { user, userRole, signOut, checkUserRole } = useAuth();
+  const { user, userRole, signOut, checkUserRole, refreshUserRole } = useAuth();
   const { toast } = useToast();
   
-  // Debug userRole
+  // Debug userRole and refresh when component mounts
   useEffect(() => {
     console.log("Current user role in Navigation:", userRole);
     console.log("Current user email:", user?.email);
     
-    // Force update the role when Navigation mounts
+    // Force refresh the user role when Navigation mounts
     if (user) {
-      checkUserRole().then(role => {
-        console.log("Updated role after check:", role);
+      refreshUserRole().then(() => {
+        console.log("Updated role after refresh in Navigation:", userRole);
       });
     }
-  }, [user, userRole, checkUserRole]);
+  }, [user, refreshUserRole]);
+  
+  // Add additional effect to respond to userRole changes
+  useEffect(() => {
+    console.log("UserRole changed in Navigation:", userRole);
+  }, [userRole]);
   
   const isActive = (path: string) => {
     return location.pathname === path;
