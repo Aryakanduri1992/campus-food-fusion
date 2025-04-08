@@ -14,6 +14,7 @@ import { Loader2, UserPlus } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { UserRole } from '@/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface UserRoleManagerProps {
   onRoleAssigned?: () => void;
@@ -31,6 +32,7 @@ const UserRoleManager: React.FC<UserRoleManagerProps> = ({ onRoleAssigned }) => 
   const [loading, setLoading] = useState(false);
   const [loadingPartners, setLoadingPartners] = useState(true);
   const [deliveryPartners, setDeliveryPartners] = useState<DeliveryPartner[]>([]);
+  const isMobile = useIsMobile();
 
   // Fetch existing delivery partners when component mounts
   useEffect(() => {
@@ -57,10 +59,11 @@ const UserRoleManager: React.FC<UserRoleManagerProps> = ({ onRoleAssigned }) => 
         return;
       }
       
-      // Get emails from our delivery_partners_emails table
+      // Get emails using a safer approach with type casting
+      // This avoids TypeScript errors when accessing tables not in the type definition
       const { data: emailData, error: emailError } = await supabase
-        .from('delivery_partners_emails')
-        .select('role_id, email');
+        .from('delivery_partners_emails' as any)
+        .select('*');
       
       if (emailError) {
         console.error("Error fetching delivery partner emails:", emailError);
@@ -73,11 +76,11 @@ const UserRoleManager: React.FC<UserRoleManagerProps> = ({ onRoleAssigned }) => 
       if (roleData) {
         partnersData = roleData.map(role => {
           // Try to find the email from our delivery_partners_emails table
-          const emailEntry = emailData?.find(e => e.role_id === role.id);
+          const emailEntry = emailData ? emailData.find((e: any) => e.role_id === role.id) : null;
           
           return {
             id: role.id,
-            email: emailEntry?.email || "Email not available",
+            email: emailEntry ? emailEntry.email : "Email not available",
             created_at: role.created_at
           };
         });
@@ -133,13 +136,13 @@ const UserRoleManager: React.FC<UserRoleManagerProps> = ({ onRoleAssigned }) => 
       if (fetchError) {
         console.error("Error fetching role ID:", fetchError);
       } else if (newRoleData) {
-        // Store the email in our custom table
+        // Store the email in our custom table using type casting to bypass TypeScript limitations
         const { error: insertError } = await supabase
-          .from('delivery_partners_emails')
+          .from('delivery_partners_emails' as any)
           .insert({
             role_id: newRoleData.id,
             email: email
-          });
+          } as any);
 
         if (insertError) {
           console.error("Error storing email:", insertError);
@@ -211,17 +214,18 @@ const UserRoleManager: React.FC<UserRoleManagerProps> = ({ onRoleAssigned }) => 
       </CardHeader>
       <CardContent>
         <div className="space-y-6">
-          <div className="flex items-center space-x-2">
+          <div className={`flex ${isMobile ? 'flex-col' : 'items-center'} ${isMobile ? 'space-y-2' : 'space-x-2'}`}>
             <Input
               placeholder="User Email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               disabled={loading}
+              className={isMobile ? 'w-full' : 'flex-grow'}
             />
             <Button 
               onClick={assignDeliveryPartnerRole} 
               disabled={loading}
-              className="bg-rv-burgundy hover:bg-rv-burgundy/90"
+              className={`bg-rv-burgundy hover:bg-rv-burgundy/90 ${isMobile ? 'w-full' : ''}`}
             >
               {loading ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
