@@ -21,8 +21,14 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   
   // Fetch cart on mount or when user changes
   useEffect(() => {
-    fetchCart();
-  }, [user]);
+    if (user) {
+      console.log("User authenticated, fetching cart data");
+      fetchCart();
+    } else {
+      console.log("No user authenticated, loading from local storage");
+      fetchCart();
+    }
+  }, [user, fetchCart]);
   
   // Define utility functions that use cart state
   const getTotalItems = () => calculateTotalItems(state.cart);

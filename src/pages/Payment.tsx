@@ -7,15 +7,14 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { toast } from "sonner";
-import { CreditCard, WalletIcon, Loader2, UtensilsCrossed, ShoppingBag } from 'lucide-react';
+import { CreditCard, WalletIcon, Loader2 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { Progress } from "@/components/ui/progress";
 import { supabase } from '@/integrations/supabase/client';
 
 const Payment = () => {
-  const { cart, getTotalPrice, placeOrder, loading: cartLoading, fetchCart } = useCart();
+  const { cart, getTotalPrice, loading: cartLoading, fetchCart } = useCart();
   const navigate = useNavigate();
   const location = useLocation();
   const [paymentMethod, setPaymentMethod] = useState<'card' | 'upi'>('card');
@@ -87,15 +86,38 @@ const Payment = () => {
   // Complete payment when progress reaches 100%
   useEffect(() => {
     if (progressValue === 100 && processingPayment) {
-      const timer = setTimeout(() => {
-        setProcessingPayment(false);
-        setShowDeliveryInfo(true);
-        toast.success("Payment successful!");
+      const timer = setTimeout(async () => {
+        try {
+          // Update order status in database
+          if (orderId) {
+            const { error } = await supabase
+              .from('orders')
+              .update({ 
+                status: 'Processing'
+              })
+              .eq('id', orderId);
+              
+            if (error) {
+              throw error;
+            }
+            
+            console.log("Order status updated to Processing");
+          }
+          
+          setProcessingPayment(false);
+          setShowDeliveryInfo(true);
+          toast.success("Payment successful!");
+        } catch (error) {
+          console.error("Error updating order status:", error);
+          toast.error("Payment processed, but there was an issue updating your order status.");
+          setProcessingPayment(false);
+          setShowDeliveryInfo(true);
+        }
       }, 500);
       
       return () => clearTimeout(timer);
     }
-  }, [progressValue, processingPayment]);
+  }, [progressValue, processingPayment, orderId]);
 
   const handlePayment = async () => {
     if (paymentMethod === 'card' && (!cardNumber || !expiryDate || !cvv || !nameOnCard)) {
@@ -107,33 +129,9 @@ const Payment = () => {
     setProgressValue(0);
     
     try {
-      // Use existing order ID or place a new order
-      let finalOrderId = orderId;
-      
-      if (!finalOrderId) {
-        finalOrderId = await placeOrder();
-      }
-      
-      if (!finalOrderId) {
-        throw new Error("Failed to place order");
-      }
-      
-      // For demo purposes, we'll update the order in the database
-      // In a real app, you would integrate with a payment provider
-      if (finalOrderId) {
-        // Update order with payment information
-        const { error } = await supabase
-          .from('orders')
-          .update({ 
-            status: 'Processing',
-            // You could store payment method, but we'll omit sensitive data
-          })
-          .eq('id', finalOrderId);
-          
-        if (error) {
-          throw error;
-        }
-      }
+      // For demo purposes, we just process the payment
+      // In a real app, this would connect to a payment provider
+      console.log("Processing payment for order:", orderId);
       
       // Progress will continue and complete via the useEffect above
       

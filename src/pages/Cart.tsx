@@ -54,12 +54,25 @@ const Cart: React.FC = () => {
       return;
     }
     
-    // Navigate to location page first
-    navigate('/location', { 
-      state: { 
-        totalAmount: getTotalPrice()
-      } 
-    });
+    try {
+      // Place the order first to get the order ID
+      const orderId = await placeOrder();
+      
+      if (orderId) {
+        // Navigate to location page with order ID
+        navigate('/location', { 
+          state: { 
+            totalAmount: getTotalPrice(),
+            orderId
+          } 
+        });
+      } else {
+        toast.error("Failed to create order. Please try again.");
+      }
+    } catch (error) {
+      console.error("Error placing order:", error);
+      toast.error("An error occurred while placing your order.");
+    }
   };
 
   // Show clear loading state with skeletons

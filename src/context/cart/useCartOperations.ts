@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { CartItem, CartState } from './types';
 import { toast } from "sonner";
 import { supabase } from '@/integrations/supabase/client';
@@ -23,7 +23,7 @@ export function useCartOperations(user: User | null) {
     cartId: null
   });
 
-  const syncCartToDatabase = async (updatedCart: CartItem[], targetCartId: string | null = state.cartId) => {
+  const syncCartToDatabase = useCallback(async (updatedCart: CartItem[], targetCartId: string | null = state.cartId) => {
     // Always save to local storage first for faster access
     saveCartToLocalStorage(updatedCart);
     
@@ -49,9 +49,9 @@ export function useCartOperations(user: User | null) {
     } finally {
       setState(prev => ({ ...prev, loading: false }));
     }
-  };
+  }, [user, state.cartId]);
 
-  const fetchCart = async () => {
+  const fetchCart = useCallback(async () => {
     console.log('Fetching cart, user:', user?.id);
     
     setState(prev => ({ ...prev, loading: true }));
@@ -142,9 +142,9 @@ export function useCartOperations(user: User | null) {
     } finally {
       setState(prev => ({ ...prev, loading: false }));
     }
-  };
+  }, [user, syncCartToDatabase]);
 
-  const addToCart = (foodItem: FoodItem) => {
+  const addToCart = useCallback((foodItem: FoodItem) => {
     setState(prev => {
       const existingItem = prev.cart.find(item => item.foodItem.id === foodItem.id);
       
@@ -171,9 +171,9 @@ export function useCartOperations(user: User | null) {
       
       return newState;
     });
-  };
+  }, [syncCartToDatabase]);
 
-  const removeFromCart = (foodItemId: number) => {
+  const removeFromCart = useCallback((foodItemId: number) => {
     setState(prev => {
       const itemToRemove = prev.cart.find(item => item.foodItem.id === foodItemId);
       if (itemToRemove) {
@@ -189,9 +189,9 @@ export function useCartOperations(user: User | null) {
       
       return { ...prev, cart: updatedCart };
     });
-  };
+  }, [syncCartToDatabase]);
 
-  const updateQuantity = (foodItemId: number, newQuantity: number) => {
+  const updateQuantity = useCallback((foodItemId: number, newQuantity: number) => {
     if (newQuantity <= 0) {
       removeFromCart(foodItemId);
       return;
@@ -211,9 +211,9 @@ export function useCartOperations(user: User | null) {
       
       return { ...prev, cart: updatedCart };
     });
-  };
+  }, [removeFromCart, syncCartToDatabase]);
 
-  const clearCart = () => {
+  const clearCart = useCallback(() => {
     // Clear local storage
     clearCartFromLocalStorage();
     
@@ -232,9 +232,9 @@ export function useCartOperations(user: User | null) {
     } else {
       toast.info('Cart cleared');
     }
-  };
+  }, [user, state.cartId]);
 
-  const placeOrder = async (): Promise<string | null> => {
+  const placeOrder = useCallback(async (): Promise<string | null> => {
     if (!user) {
       toast.error('Please log in to place an order');
       return null;
@@ -300,7 +300,7 @@ export function useCartOperations(user: User | null) {
     } finally {
       setState(prev => ({ ...prev, loading: false }));
     }
-  };
+  }, [user, state.cart, state.cartId]);
 
   return {
     state,
