@@ -10,6 +10,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { toast } from 'sonner';
 import { MapPin, Navigation } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
+import { useCart } from '@/context/CartContext'; // Import cart context
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -28,12 +29,13 @@ const Location: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user } = useAuth();
+  const { cart, getTotalPrice } = useCart(); // Get cart from context
   const [loading, setLoading] = useState(false);
   const [usingCurrentLocation, setUsingCurrentLocation] = useState(false);
   const [currentCoordinates, setCurrentCoordinates] = useState<{lat: number, lng: number} | null>(null);
   
   const orderId = location.state?.orderId;
-  const totalAmount = location.state?.totalAmount || 0;
+  const totalAmount = location.state?.totalAmount || getTotalPrice(); // Fallback to cart total
   
   const form = useForm<LocationFormValues>({
     resolver: zodResolver(locationSchema),
@@ -47,12 +49,12 @@ const Location: React.FC = () => {
   });
 
   useEffect(() => {
-    // Check if the page was accessed directly without order data
-    if (!orderId) {
-      toast.error('No order information found');
+    // Check if cart is empty
+    if (cart.length === 0 && !orderId) {
+      toast.error('Your cart is empty');
       navigate('/cart');
     }
-  }, [orderId, navigate]);
+  }, [cart, orderId, navigate]);
 
   const detectCurrentLocation = () => {
     setUsingCurrentLocation(true);
@@ -113,15 +115,16 @@ const Location: React.FC = () => {
     }, 1000);
   };
 
-  if (!orderId) {
+  // Fallback if no orderId and cart is empty
+  if (cart.length === 0 && !orderId) {
     return (
       <div className="container mx-auto px-4 py-12 mb-16 md:mb-0">
         <Card className="max-w-md mx-auto">
           <CardHeader>
-            <CardTitle className="text-center text-rv-navy">Invalid Order</CardTitle>
+            <CardTitle className="text-center text-rv-navy">Empty Cart</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4 text-center">
-            <p>No order information found.</p>
+            <p>Your cart is empty.</p>
             <Button onClick={() => navigate('/menu')}>Browse Menu</Button>
           </CardContent>
         </Card>
@@ -140,7 +143,7 @@ const Location: React.FC = () => {
             <div className="mb-4 p-4 bg-gray-50 rounded-md">
               <div className="flex justify-between">
                 <span className="font-semibold">Order ID:</span>
-                <span className="text-gray-600">{orderId.substring(0, 8)}</span>
+                <span className="text-gray-600">{orderId ? orderId.substring(0, 8) : 'New Order'}</span>
               </div>
               <div className="flex justify-between mt-2">
                 <span className="font-semibold">Total Amount:</span>

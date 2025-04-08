@@ -4,6 +4,7 @@ import { useSearchParams } from 'react-router-dom';
 import { mockFoodItems, getFoodByCategory } from '@/data/mockData';
 import FoodCard from '@/components/FoodCard';
 import CategoryFilter from '@/components/CategoryFilter';
+import { useCart } from '@/context/CartContext';
 
 const Menu: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -11,6 +12,7 @@ const Menu: React.FC = () => {
   
   const [selectedCategory, setSelectedCategory] = useState<string>(initialCategory);
   const [filteredItems, setFilteredItems] = useState(mockFoodItems);
+  const { loading } = useCart(); // Add cart context to show loading state if needed
   
   const categories = ['All', 'Veg', 'Non-Veg', 'Beverage'];
 
@@ -40,16 +42,24 @@ const Menu: React.FC = () => {
         onSelectCategory={handleCategorySelect}
       />
       
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredItems.map((foodItem) => (
-          <FoodCard key={foodItem.id} foodItem={foodItem} />
-        ))}
-      </div>
-      
-      {filteredItems.length === 0 && (
+      {loading ? (
         <div className="text-center py-12">
-          <p className="text-gray-500 text-lg">No items found in this category.</p>
+          <p className="text-gray-500 text-lg">Loading menu items...</p>
         </div>
+      ) : (
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredItems.map((foodItem) => (
+              <FoodCard key={foodItem.id} foodItem={foodItem} />
+            ))}
+          </div>
+          
+          {filteredItems.length === 0 && (
+            <div className="text-center py-12">
+              <p className="text-gray-500 text-lg">No items found in this category.</p>
+            </div>
+          )}
+        </>
       )}
     </div>
   );
