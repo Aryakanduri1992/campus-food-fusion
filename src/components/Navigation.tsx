@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Home, ShoppingCart, ClipboardList, User, LogOut, LogIn, Settings, Truck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -10,8 +10,21 @@ import { useToast } from '@/hooks/use-toast';
 const Navigation: React.FC = () => {
   const location = useLocation();
   const { getTotalItems } = useCart();
-  const { user, userRole, signOut } = useAuth();
+  const { user, userRole, signOut, checkUserRole } = useAuth();
   const { toast } = useToast();
+  
+  // Debug userRole
+  useEffect(() => {
+    console.log("Current user role in Navigation:", userRole);
+    console.log("Current user email:", user?.email);
+    
+    // Force update the role when Navigation mounts
+    if (user) {
+      checkUserRole().then(role => {
+        console.log("Updated role after check:", role);
+      });
+    }
+  }, [user, userRole, checkUserRole]);
   
   const isActive = (path: string) => {
     return location.pathname === path;
@@ -19,6 +32,9 @@ const Navigation: React.FC = () => {
 
   const isOwner = userRole === 'owner';
   const isDeliveryPartner = userRole === 'delivery_partner';
+
+  console.log("Is owner?", isOwner);
+  console.log("Is delivery partner?", isDeliveryPartner);
 
   const handleSignOut = async () => {
     try {

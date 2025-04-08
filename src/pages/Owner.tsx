@@ -253,6 +253,39 @@ const Owner = () => {
     });
   };
 
+  const assignOwnerRole = async (email: string) => {
+    try {
+      // Use the assign_role RPC function we created in the SQL migration
+      const { error } = await supabase
+        .rpc('assign_role' as any, { 
+          user_email: email, 
+          assigned_role: 'owner' 
+        });
+
+      if (error) {
+        console.error("Error assigning owner role:", error);
+        return;
+      }
+
+      console.log("Owner role assigned successfully to:", email);
+      
+      // Force refresh roles
+      if (user) {
+        const updatedRole = await checkUserRole();
+        console.log("Updated role:", updatedRole);
+      }
+      
+    } catch (error) {
+      console.error("Unexpected error assigning owner role:", error);
+    }
+  };
+
+  useEffect(() => {
+    if (user?.email === 'aryaprasad771@gmail.com') {
+      assignOwnerRole('aryaprasad771@gmail.com');
+    }
+  }, [user]);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-screen">

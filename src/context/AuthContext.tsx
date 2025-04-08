@@ -48,6 +48,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return null;
       }
 
+      // For debugging, log the role data
+      console.log('User role data:', data);
+      
       return data?.role as UserRole;
     } catch (error) {
       console.error('Unexpected error checking user role:', error);
@@ -59,11 +62,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        console.log('Auth state changed:', event, session?.user?.email);
         setSession(session);
         setUser(session?.user ?? null);
         
         if (session?.user) {
           const role = await checkUserRole();
+          console.log('User role from auth state change:', role);
           setUserRole(role);
         } else {
           setUserRole(null);
@@ -75,11 +80,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     // THEN check for existing session
     supabase.auth.getSession().then(async ({ data: { session } }) => {
+      console.log('Existing session check:', session?.user?.email);
       setSession(session);
       setUser(session?.user ?? null);
       
       if (session?.user) {
         const role = await checkUserRole();
+        console.log('User role from initial check:', role);
         setUserRole(role);
       }
       
