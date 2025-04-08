@@ -19,6 +19,7 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     placeOrder 
   } = useCartOperations(user);
   
+  // Fetch cart on mount or when user changes
   useEffect(() => {
     fetchCart();
   }, [user]);

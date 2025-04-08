@@ -8,23 +8,26 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { useToast } from '@/hooks/use-toast';
+import { toast } from "sonner";
 import { CreditCard, WalletIcon, Loader2, UtensilsCrossed, ShoppingBag } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
+import { Progress } from "@/components/ui/progress";
+import { supabase } from '@/integrations/supabase/client';
 
 const Payment = () => {
-  const { cart, getTotalPrice, placeOrder, loading, fetchCart } = useCart();
+  const { cart, getTotalPrice, placeOrder, loading: cartLoading, fetchCart } = useCart();
   const navigate = useNavigate();
   const location = useLocation();
-  const { toast } = useToast();
   const [paymentMethod, setPaymentMethod] = useState<'card' | 'upi'>('card');
   const [cardNumber, setCardNumber] = useState('');
   const [expiryDate, setExpiryDate] = useState('');
   const [cvv, setCvv] = useState('');
   const [nameOnCard, setNameOnCard] = useState('');
   const [processingPayment, setProcessingPayment] = useState(false);
+  const [progressValue, setProgressValue] = useState(0);
   const [showDeliveryInfo, setShowDeliveryInfo] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const { user } = useAuth();
   
   const locationData = location.state?.locationData;
   const orderId = location.state?.orderId;
@@ -47,66 +50,98 @@ const Payment = () => {
     loadCart();
   }, [fetchCart]);
 
-  // Check if cart is empty after loading
+  // Check if we have an order ID or cart items
   useEffect(() => {
     if (!isLoading && cart.length === 0 && !orderId) {
-      toast({
-        title: "Empty Cart",
-        description: "Your cart is empty. Please add items before proceeding to payment.",
-        variant: "destructive",
-      });
+      toast("Your cart is empty. Please add items before proceeding to payment.");
       navigate('/cart');
     }
-  }, [cart, navigate, toast, isLoading, orderId]);
+  }, [cart, navigate, isLoading, orderId]);
 
   // Check if location data is available
   useEffect(() => {
     if (!isLoading && !locationData && !orderId) {
-      toast({
-        title: "Location Required",
-        description: "Please enter your delivery details first.",
-        variant: "destructive",
-      });
+      toast("Please enter your delivery details first.");
       navigate('/location');
     }
-  }, [locationData, navigate, toast, isLoading, orderId]);
+  }, [locationData, navigate, isLoading, orderId]);
+
+  // Simulate payment progress
+  useEffect(() => {
+    if (processingPayment) {
+      const interval = setInterval(() => {
+        setProgressValue(prev => {
+          const newValue = prev + 5;
+          if (newValue >= 100) {
+            clearInterval(interval);
+            return 100;
+          }
+          return newValue;
+        });
+      }, 150);
+      
+      return () => clearInterval(interval);
+    }
+  }, [processingPayment]);
+
+  // Complete payment when progress reaches 100%
+  useEffect(() => {
+    if (progressValue === 100 && processingPayment) {
+      const timer = setTimeout(() => {
+        setProcessingPayment(false);
+        setShowDeliveryInfo(true);
+        toast.success("Payment successful!");
+      }, 500);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [progressValue, processingPayment]);
 
   const handlePayment = async () => {
     if (paymentMethod === 'card' && (!cardNumber || !expiryDate || !cvv || !nameOnCard)) {
-      toast({
-        title: "Missing Information",
-        description: "Please fill in all card details",
-        variant: "destructive",
-      });
+      toast.error("Please fill in all card details");
       return;
     }
     
     setProcessingPayment(true);
+    setProgressValue(0);
     
     try {
       // Use existing order ID or place a new order
-      const finalOrderId = orderId || await placeOrder();
+      let finalOrderId = orderId;
       
-      if (finalOrderId) {
-        // Simulate payment processing
-        setTimeout(() => {
-          setProcessingPayment(false);
-          toast({
-            title: "Payment Successful",
-            description: "Your order has been placed successfully!",
-          });
-          setShowDeliveryInfo(true);
-        }, 2000);
-      } else {
+      if (!finalOrderId) {
+        finalOrderId = await placeOrder();
+      }
+      
+      if (!finalOrderId) {
         throw new Error("Failed to place order");
       }
+      
+      // For demo purposes, we'll update the order in the database
+      // In a real app, you would integrate with a payment provider
+      if (finalOrderId) {
+        // Update order with payment information
+        const { error } = await supabase
+          .from('orders')
+          .update({ 
+            status: 'Processing',
+            // You could store payment method, but we'll omit sensitive data
+          })
+          .eq('id', finalOrderId);
+          
+        if (error) {
+          throw error;
+        }
+      }
+      
+      // Progress will continue and complete via the useEffect above
+      
     } catch (error) {
       setProcessingPayment(false);
-      toast({
-        title: "Payment Failed",
-        description: error instanceof Error ? error.message : "An error occurred during payment",
-        variant: "destructive",
-      });
+      setProgressValue(0);
+      console.error("Payment error:", error);
+      toast.error(error instanceof Error ? error.message : "An error occurred during payment");
     }
   };
 
@@ -270,6 +305,16 @@ const Payment = () => {
               </TabsContent>
             </Tabs>
             
+            {processingPayment && (
+              <div className="mt-6 space-y-3">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm font-medium">Processing payment</span>
+                  <span className="text-sm font-medium">{progressValue}%</span>
+                </div>
+                <Progress value={progressValue} className="h-2" />
+              </div>
+            )}
+            
             <div className="mt-6 pt-4 border-t">
               <div className="flex justify-between mb-2">
                 <span>Subtotal:</span>
@@ -289,9 +334,9 @@ const Payment = () => {
             <Button
               className="w-full bg-rv-burgundy hover:bg-rv-burgundy/90"
               onClick={handlePayment}
-              disabled={processingPayment || loading || cart.length === 0}
+              disabled={processingPayment || cartLoading || (cart.length === 0 && !orderId)}
             >
-              {processingPayment || loading ? (
+              {processingPayment ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Processing...

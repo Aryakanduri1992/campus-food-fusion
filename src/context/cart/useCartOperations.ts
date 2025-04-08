@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { CartItem, CartState } from './types';
 import { toast } from "sonner";
@@ -162,9 +163,13 @@ export function useCartOperations(user: User | null) {
       
       console.log('Updated cart after add:', updatedCart);
       
-      syncCartToDatabase(updatedCart);
+      // Don't call syncCartToDatabase inside setState to avoid infinite loop
+      const newState = { ...prev, cart: updatedCart };
       
-      return { ...prev, cart: updatedCart };
+      // Schedule sync to run after state update
+      setTimeout(() => syncCartToDatabase(updatedCart), 0);
+      
+      return newState;
     });
   };
 
@@ -179,7 +184,8 @@ export function useCartOperations(user: User | null) {
       
       console.log('Updated cart after remove:', updatedCart);
       
-      syncCartToDatabase(updatedCart);
+      // Schedule sync to run after state update
+      setTimeout(() => syncCartToDatabase(updatedCart), 0);
       
       return { ...prev, cart: updatedCart };
     });
@@ -200,7 +206,8 @@ export function useCartOperations(user: User | null) {
       
       console.log('Updated cart after quantity change:', updatedCart);
       
-      syncCartToDatabase(updatedCart);
+      // Schedule sync to run after state update
+      setTimeout(() => syncCartToDatabase(updatedCart), 0);
       
       return { ...prev, cart: updatedCart };
     });

@@ -10,7 +10,7 @@ import { useAuth } from '@/context/AuthContext';
 import { Skeleton } from '@/components/ui/skeleton';
 
 const Cart: React.FC = () => {
-  const { cart, removeFromCart, updateQuantity, clearCart, getTotalPrice, placeOrder, loading, fetchCart } = useCart();
+  const { cart, removeFromCart, updateQuantity, getTotalPrice, placeOrder, loading, fetchCart } = useCart();
   const { user } = useAuth();
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(true);
@@ -33,20 +33,15 @@ const Cart: React.FC = () => {
           toast.error('Failed to load your cart items');
         }
       } finally {
-        // Make sure to set loading to false even if there's an error
         setIsLoading(false);
       }
     };
     
     loadCart();
-    
-    // Log cart state for debugging
-    console.log('Cart component mounted, current cart:', cart);
   }, [fetchCart, retryCount]);
 
-  // Add a second useEffect to log cart changes
+  // Add a second useEffect to track when cart is loaded
   useEffect(() => {
-    console.log('Cart updated:', cart);
     if (cart.length > 0) {
       setCartLoaded(true);
     }
@@ -59,16 +54,12 @@ const Cart: React.FC = () => {
       return;
     }
     
-    const orderId = await placeOrder();
-    if (orderId) {
-      // Navigate to location page instead of payment
-      navigate('/location', { 
-        state: { 
-          orderId: orderId,
-          totalAmount: getTotalPrice()
-        } 
-      });
-    }
+    // Navigate to location page first
+    navigate('/location', { 
+      state: { 
+        totalAmount: getTotalPrice()
+      } 
+    });
   };
 
   // Show clear loading state with skeletons
