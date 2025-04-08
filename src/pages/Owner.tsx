@@ -32,6 +32,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Label } from '@/components/ui/label';
 import { Loader2, MapPin, Clock, Truck, CheckCircle } from 'lucide-react';
 import UserRoleManager from '@/components/UserRoleManager';
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface OrderWithItems {
   id: string;
@@ -54,7 +55,7 @@ interface DeliveryPartner {
 }
 
 const Owner = () => {
-  const { user, userRole, checkUserRole } = useAuth();
+  const { user, userRole, checkUserRole, isOwner } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
@@ -68,32 +69,60 @@ const Owner = () => {
   useEffect(() => {
     const checkAccess = async () => {
       try {
-        if (user) {
-          const role = await checkUserRole();
-          console.log("Current user role:", role);
-          
-          if (role !== 'owner') {
-            toast({
-              title: "Access Denied",
-              description: "You don't have permission to access this page",
-              variant: "destructive"
-            });
-            navigate('/');
-            return;
-          }
-          
-          fetchOrders();
-          fetchDeliveryPartners();
-        } else {
+        console.log("Checking access - User:", user?.email, "isOwner:", isOwner);
+        
+        if (!user) {
+          console.log("No user found, redirecting to auth");
           toast({
             title: "Authentication Required",
             description: "Please log in to access this page",
             variant: "destructive"
           });
           navigate('/auth');
+          return;
         }
+        
+        let roleCheckAttempts = 0;
+        const maxAttempts = 3;
+        let hasOwnerRole = isOwner;
+        
+        while (!hasOwnerRole && roleCheckAttempts < maxAttempts) {
+          console.log(`Checking owner role, attempt ${roleCheckAttempts + 1}`);
+          roleCheckAttempts++;
+          
+          try {
+            const role = await checkUserRole();
+            console.log("Role check returned:", role);
+            hasOwnerRole = role === 'owner';
+            
+            if (hasOwnerRole) {
+              console.log("Owner role confirmed");
+              break;
+            }
+            
+            if (roleCheckAttempts < maxAttempts) {
+              await new Promise(resolve => setTimeout(resolve, 500));
+            }
+          } catch (roleError) {
+            console.error("Error in role check:", roleError);
+          }
+        }
+        
+        if (!hasOwnerRole) {
+          console.log("Access denied after max attempts, redirecting");
+          toast({
+            title: "Access Denied",
+            description: "You don't have permission to access this page",
+            variant: "destructive"
+          });
+          navigate('/');
+          return;
+        }
+        
+        fetchOrders();
+        fetchDeliveryPartners();
       } catch (error) {
-        console.error("Error checking access:", error);
+        console.error("Error in access check:", error);
         toast({
           title: "Error",
           description: "An error occurred while checking permissions",
@@ -105,7 +134,7 @@ const Owner = () => {
     };
     
     checkAccess();
-  }, [user, navigate]);
+  }, [user, isOwner, navigate]);
 
   const fetchDeliveryPartners = async () => {
     try {
@@ -135,8 +164,6 @@ const Owner = () => {
 
   const fetchOrders = async () => {
     try {
-      setLoading(true);
-      
       const { data: ordersData, error: ordersError } = await supabase
         .from('orders')
         .select('*')
@@ -168,8 +195,6 @@ const Owner = () => {
         description: "Failed to load orders",
         variant: "destructive"
       });
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -403,10 +428,24 @@ const Owner = () => {
 
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center h-screen">
-        <Loader2 className="h-12 w-12 animate-spin text-rv-burgundy mb-4" />
-        <h2 className="text-xl font-semibold text-rv-navy">Loading Owner Dashboard...</h2>
-        <p className="text-gray-500 mt-2">Please wait while we prepare your dashboard</p>
+      <div className="container mx-auto py-8 px-4">
+        <h1 className="text-3xl font-bold mb-8 text-rv-navy flex items-center">
+          <Skeleton className="h-10 w-64" />
+        </h1>
+        
+        <div className="flex flex-col items-center justify-center py-12">
+          <Loader2 className="h-16 w-16 animate-spin text-rv-burgundy mb-6" />
+          <h2 className="text-2xl font-semibold text-rv-navy mb-2">Preparing Owner Dashboard</h2>
+          <p className="text-gray-500 mb-8 text-center max-w-md">
+            Please wait while we verify your credentials and load your dashboard...
+          </p>
+          
+          <div className="w-full max-w-md space-y-3">
+            <Skeleton className="h-4 w-full" />
+            <Skeleton className="h-4 w-3/4" />
+            <Skeleton className="h-4 w-5/6" />
+          </div>
+        </div>
       </div>
     );
   }
