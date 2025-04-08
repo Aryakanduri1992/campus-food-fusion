@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { toast } from 'sonner';
-import { MapPin, Navigation } from 'lucide-react';
+import { MapPin, Navigation, Loader2 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useCart } from '@/context/CartContext'; 
 import { useForm } from 'react-hook-form';
@@ -31,6 +31,7 @@ const Location: React.FC = () => {
   const { user } = useAuth();
   const { cart, getTotalPrice, fetchCart } = useCart();
   const [loading, setLoading] = useState(false);
+  const [cartLoading, setCartLoading] = useState(true);
   const [usingCurrentLocation, setUsingCurrentLocation] = useState(false);
   const [currentCoordinates, setCurrentCoordinates] = useState<{lat: number, lng: number} | null>(null);
   
@@ -50,16 +51,22 @@ const Location: React.FC = () => {
 
   useEffect(() => {
     // Fetch latest cart data when component mounts
-    fetchCart();
-  }, []);
+    const loadCart = async () => {
+      setCartLoading(true);
+      await fetchCart();
+      setCartLoading(false);
+    };
+    
+    loadCart();
+  }, [fetchCart]);
 
   useEffect(() => {
-    // Check if cart is empty
-    if (cart.length === 0 && !orderId) {
+    // Check if cart is empty after loading is complete
+    if (!cartLoading && cart.length === 0 && !orderId) {
       toast.error('Your cart is empty');
       navigate('/cart');
     }
-  }, [cart, orderId, navigate]);
+  }, [cart, orderId, navigate, cartLoading]);
 
   const detectCurrentLocation = () => {
     setUsingCurrentLocation(true);
@@ -119,6 +126,16 @@ const Location: React.FC = () => {
       });
     }, 1000);
   };
+
+  // Show loading state while cart is being fetched
+  if (cartLoading) {
+    return (
+      <div className="container mx-auto px-4 py-12 mb-16 md:mb-0 flex flex-col items-center justify-center">
+        <Loader2 className="h-12 w-12 animate-spin text-rv-navy mb-4" />
+        <p className="text-lg">Loading your delivery information...</p>
+      </div>
+    );
+  }
 
   // Fallback if no orderId and cart is empty
   if (cart.length === 0 && !orderId) {
@@ -246,7 +263,12 @@ const Location: React.FC = () => {
                   className="w-full bg-rv-navy hover:bg-rv-burgundy"
                   disabled={loading}
                 >
-                  {loading ? 'Processing...' : 'Continue to Payment'}
+                  {loading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Processing...
+                    </>
+                  ) : 'Continue to Payment'}
                 </Button>
                 
                 <Button 

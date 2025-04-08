@@ -1,9 +1,9 @@
 
-import React, { useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useCart } from '@/context/CartContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Minus, Plus, Trash2, ShoppingBag } from 'lucide-react';
+import { Minus, Plus, Trash2, ShoppingBag, Loader2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from "sonner";
 import { useAuth } from '@/context/AuthContext';
@@ -12,11 +12,24 @@ const Cart: React.FC = () => {
   const { cart, removeFromCart, updateQuantity, clearCart, getTotalPrice, placeOrder, loading, fetchCart } = useCart();
   const { user } = useAuth();
   const navigate = useNavigate();
+  const [isLoading, setIsLoading] = useState(true);
 
   // Fetch cart data when component mounts
   useEffect(() => {
-    fetchCart();
-  }, []);
+    const loadCart = async () => {
+      setIsLoading(true);
+      try {
+        await fetchCart();
+      } catch (error) {
+        console.error('Error fetching cart:', error);
+        toast.error('Failed to load your cart items');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    loadCart();
+  }, [fetchCart]);
 
   const handlePlaceOrder = async () => {
     if (!user) {
@@ -36,6 +49,17 @@ const Cart: React.FC = () => {
       });
     }
   };
+
+  // Show loading state while cart is being fetched
+  if (isLoading) {
+    return (
+      <div className="container mx-auto px-4 py-12 flex flex-col items-center justify-center mb-16 md:mb-0">
+        <Loader2 size={64} className="text-rv-navy mb-4 animate-spin" />
+        <h2 className="text-2xl font-bold mb-2">Loading your cart</h2>
+        <p className="text-gray-500">Please wait while we retrieve your items...</p>
+      </div>
+    );
+  }
 
   if (cart.length === 0) {
     return (
@@ -140,7 +164,12 @@ const Cart: React.FC = () => {
                 onClick={handlePlaceOrder}
                 disabled={loading}
               >
-                {loading ? 'Processing...' : 'Place Order'}
+                {loading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Processing...
+                  </>
+                ) : 'Place Order'}
               </Button>
               
               <Button 

@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useCart } from '@/context/CartContext';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,12 +9,13 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useToast } from '@/hooks/use-toast';
-import { CreditCard, WalletIcon, Loader2, UtensilsCrossed } from 'lucide-react';
+import { CreditCard, WalletIcon, Loader2, UtensilsCrossed, ShoppingBag } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 
 const Payment = () => {
-  const { cart, getTotalPrice, placeOrder, loading } = useCart();
+  const { cart, getTotalPrice, placeOrder, loading, fetchCart } = useCart();
   const navigate = useNavigate();
+  const location = useLocation();
   const { toast } = useToast();
   const [paymentMethod, setPaymentMethod] = useState<'card' | 'upi'>('card');
   const [cardNumber, setCardNumber] = useState('');
@@ -23,6 +24,11 @@ const Payment = () => {
   const [nameOnCard, setNameOnCard] = useState('');
   const [processingPayment, setProcessingPayment] = useState(false);
   const [showDeliveryInfo, setShowDeliveryInfo] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  
+  const locationData = location.state?.locationData;
+  const orderId = location.state?.orderId;
+  const totalAmount = location.state?.totalAmount || getTotalPrice();
   
   const deliveryPerson = {
     name: "Rahul Kumar",
@@ -30,16 +36,40 @@ const Payment = () => {
     estimatedTime: "30-45 minutes"
   };
 
+  // Fetch cart data when component mounts
   useEffect(() => {
-    if (cart.length === 0) {
-      navigate('/cart');
+    const loadCart = async () => {
+      setIsLoading(true);
+      await fetchCart();
+      setIsLoading(false);
+    };
+    
+    loadCart();
+  }, [fetchCart]);
+
+  // Check if cart is empty after loading
+  useEffect(() => {
+    if (!isLoading && cart.length === 0 && !orderId) {
       toast({
         title: "Empty Cart",
         description: "Your cart is empty. Please add items before proceeding to payment.",
         variant: "destructive",
       });
+      navigate('/cart');
     }
-  }, [cart, navigate, toast]);
+  }, [cart, navigate, toast, isLoading, orderId]);
+
+  // Check if location data is available
+  useEffect(() => {
+    if (!isLoading && !locationData && !orderId) {
+      toast({
+        title: "Location Required",
+        description: "Please enter your delivery details first.",
+        variant: "destructive",
+      });
+      navigate('/location');
+    }
+  }, [locationData, navigate, toast, isLoading, orderId]);
 
   const handlePayment = async () => {
     if (paymentMethod === 'card' && (!cardNumber || !expiryDate || !cvv || !nameOnCard)) {
@@ -54,10 +84,10 @@ const Payment = () => {
     setProcessingPayment(true);
     
     try {
-      // Process payment
-      const orderId = await placeOrder();
+      // Use existing order ID or place a new order
+      const finalOrderId = orderId || await placeOrder();
       
-      if (orderId) {
+      if (finalOrderId) {
         // Simulate payment processing
         setTimeout(() => {
           setProcessingPayment(false);
@@ -115,6 +145,16 @@ const Payment = () => {
       }
     }
   };
+
+  // Show loading state while cart is being fetched
+  if (isLoading) {
+    return (
+      <div className="container mx-auto py-16 px-4 flex flex-col items-center justify-center">
+        <Loader2 className="h-12 w-12 animate-spin text-rv-navy mb-4" />
+        <p className="text-lg">Loading your payment details...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="container mx-auto py-8 px-4">
@@ -233,7 +273,7 @@ const Payment = () => {
             <div className="mt-6 pt-4 border-t">
               <div className="flex justify-between mb-2">
                 <span>Subtotal:</span>
-                <span>₹{getTotalPrice().toFixed(2)}</span>
+                <span>₹{totalAmount.toFixed(2)}</span>
               </div>
               <div className="flex justify-between mb-2">
                 <span>Delivery Fee:</span>
@@ -241,7 +281,7 @@ const Payment = () => {
               </div>
               <div className="flex justify-between font-bold mt-2 pt-2 border-t">
                 <span>Total:</span>
-                <span>₹{(getTotalPrice() + 30).toFixed(2)}</span>
+                <span>₹{(Number(totalAmount) + 30).toFixed(2)}</span>
               </div>
             </div>
           </CardContent>
@@ -249,7 +289,7 @@ const Payment = () => {
             <Button
               className="w-full bg-rv-burgundy hover:bg-rv-burgundy/90"
               onClick={handlePayment}
-              disabled={processingPayment || loading}
+              disabled={processingPayment || loading || cart.length === 0}
             >
               {processingPayment || loading ? (
                 <>
@@ -257,7 +297,7 @@ const Payment = () => {
                   Processing...
                 </>
               ) : (
-                `Pay ₹${(getTotalPrice() + 30).toFixed(2)}`
+                `Pay ₹${(Number(totalAmount) + 30).toFixed(2)}`
               )}
             </Button>
           </CardFooter>
