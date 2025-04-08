@@ -92,16 +92,49 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  // Check if a specific email should have owner role
+  const isOwnerEmail = (email: string): boolean => {
+    // Add any email addresses that should automatically have owner role
+    const ownerEmails = ['aryaprasad771@gmail.com'];
+    return ownerEmails.includes(email);
+  };
+
   // New function to refresh user role explicitly
   const refreshUserRole = async (): Promise<void> => {
     if (user) {
       const role = await checkUserRole();
       console.log('User role after manual refresh:', role);
+      
+      // Update userRole state
       setUserRole(role);
       
       // Update convenience flags
       setIsDeliveryPartner(role === 'delivery_partner');
       setIsOwner(role === 'owner');
+      
+      // Also check if the email is for an owner
+      if (user.email && isOwnerEmail(user.email)) {
+        console.log('Owner email detected:', user.email);
+        setIsOwner(true);
+        
+        // If they don't have the role in database yet, assign it
+        if (role !== 'owner') {
+          try {
+            const { error } = await supabase
+              .rpc('assign_role', { 
+                user_email: user.email, 
+                assigned_role: 'owner' 
+              });
+              
+            if (!error) {
+              console.log('Owner role assigned successfully');
+              setUserRole('owner');
+            }
+          } catch (e) {
+            console.error('Error assigning owner role:', e);
+          }
+        }
+      }
       
       // Also check if email is registered as delivery partner
       if (user.email) {
@@ -121,13 +154,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setUser(session?.user ?? null);
         
         if (session?.user) {
+          // Check if this is an owner email
+          if (session.user.email && isOwnerEmail(session.user.email)) {
+            console.log('Owner email detected during auth change:', session.user.email);
+            setIsOwner(true);
+          }
+          
           const role = await checkUserRole();
           console.log('User role from auth state change:', role);
           setUserRole(role);
           
           // Update convenience flags
           setIsDeliveryPartner(role === 'delivery_partner');
-          setIsOwner(role === 'owner');
+          setIsOwner(prev => prev || role === 'owner');
           
           // Check if email is registered as delivery partner
           if (session.user.email) {
@@ -153,13 +192,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUser(session?.user ?? null);
       
       if (session?.user) {
+        // Check if this is an owner email
+        if (session.user.email && isOwnerEmail(session.user.email)) {
+          console.log('Owner email detected during session check:', session.user.email);
+          setIsOwner(true);
+        }
+        
         const role = await checkUserRole();
         console.log('User role from initial check:', role);
         setUserRole(role);
         
         // Update convenience flags
         setIsDeliveryPartner(role === 'delivery_partner');
-        setIsOwner(role === 'owner');
+        setIsOwner(prev => prev || role === 'owner');
         
         // Check if email is registered as delivery partner
         if (session.user.email) {

@@ -1,3 +1,4 @@
+
 import React, { useEffect } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -34,23 +35,37 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 // Owner route component - only for users with owner role
 const OwnerRoute = ({ children }: { children: React.ReactNode }) => {
   const { user, loading, isOwner, refreshUserRole } = useAuth();
+  const navigate = useNavigate();
   
   // Refresh user role when this component mounts
   React.useEffect(() => {
     if (user) {
-      refreshUserRole();
+      console.log("OwnerRoute - Refreshing user role");
+      refreshUserRole().then(() => {
+        console.log("OwnerRoute - After refresh, isOwner:", isOwner);
+      });
     }
   }, [user, refreshUserRole]);
   
-  if (loading) return <div className="flex items-center justify-center h-screen">Loading...</div>;
+  if (loading) {
+    console.log("OwnerRoute - Still loading");
+    return <div className="flex items-center justify-center h-screen">Loading...</div>;
+  }
   
-  if (!user) return <Navigate to="/auth" replace />;
+  if (!user) {
+    console.log("OwnerRoute - No user, redirecting to auth");
+    return <Navigate to="/auth" replace />;
+  }
   
-  console.log("OwnerRoute - Current userRole check:", isOwner);
+  // This needs to check the latest isOwner value
+  console.log("OwnerRoute - Final check, isOwner:", isOwner);
   
   if (!isOwner) {
     console.log("Access denied: User does not have owner role");
-    return <Navigate to="/" replace />;
+    setTimeout(() => {
+      navigate('/');
+    }, 0);
+    return <div className="flex items-center justify-center h-screen">Access denied. Redirecting...</div>;
   }
   
   console.log("Access granted: User has owner role");
@@ -86,7 +101,7 @@ const DeliveryPartnerRoute = ({ children }: { children: React.ReactNode }) => {
 
 // Component to handle automatic redirection for delivery partners
 const AutoRedirect = () => {
-  const { user, loading, isDeliveryPartner, isDeliveryPartnerEmail, refreshUserRole } = useAuth();
+  const { user, loading, isDeliveryPartner, isDeliveryPartnerEmail, isOwner, refreshUserRole } = useAuth();
   const navigate = useNavigate();
   
   useEffect(() => {
@@ -98,9 +113,15 @@ const AutoRedirect = () => {
           console.log('Auto-redirecting delivery partner to dashboard');
           navigate('/delivery');
         }
+        
+        // Check if user should be redirected to owner dashboard
+        if (isOwner) {
+          console.log('Auto-redirecting owner to dashboard');
+          navigate('/owner');
+        }
       });
     }
-  }, [user, loading, navigate, isDeliveryPartner, isDeliveryPartnerEmail, refreshUserRole]);
+  }, [user, loading, navigate, isDeliveryPartner, isDeliveryPartnerEmail, isOwner, refreshUserRole]);
   
   return null;
 };
