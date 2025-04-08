@@ -5,6 +5,7 @@ import { mockFoodItems, getFoodByCategory } from '@/data/mockData';
 import FoodCard from '@/components/FoodCard';
 import CategoryFilter from '@/components/CategoryFilter';
 import { useCart } from '@/context/CartContext';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const Menu: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -12,7 +13,8 @@ const Menu: React.FC = () => {
   
   const [selectedCategory, setSelectedCategory] = useState<string>(initialCategory);
   const [filteredItems, setFilteredItems] = useState(mockFoodItems);
-  const { loading } = useCart(); // Add cart context to show loading state if needed
+  const [isLoading, setIsLoading] = useState(true);
+  const { loading: cartLoading } = useCart();
   
   const categories = ['All', 'Veg', 'Non-Veg', 'Beverage'];
 
@@ -25,12 +27,35 @@ const Menu: React.FC = () => {
     }
     
     // Filter food items based on selected category
-    setFilteredItems(getFoodByCategory(selectedCategory));
+    setIsLoading(true);
+    
+    // Simulate network request with minimal delay
+    const timer = setTimeout(() => {
+      setFilteredItems(getFoodByCategory(selectedCategory));
+      setIsLoading(false);
+    }, 300);
+    
+    return () => clearTimeout(timer);
   }, [selectedCategory, setSearchParams]);
 
   const handleCategorySelect = (category: string) => {
     setSelectedCategory(category);
   };
+
+  const renderFoodCardSkeleton = () => (
+    <div className="rounded-lg border bg-card text-card-foreground shadow-sm overflow-hidden">
+      <Skeleton className="w-full h-48" />
+      <div className="p-4 space-y-3">
+        <Skeleton className="h-6 w-3/4" />
+        <Skeleton className="h-4 w-full" />
+        <Skeleton className="h-4 w-5/6" />
+        <div className="flex justify-between items-center mt-2">
+          <Skeleton className="h-6 w-16" />
+          <Skeleton className="h-9 w-24 rounded-md" />
+        </div>
+      </div>
+    </div>
+  );
 
   return (
     <div className="container mx-auto px-4 py-8 mb-16 md:mb-0">
@@ -42,9 +67,13 @@ const Menu: React.FC = () => {
         onSelectCategory={handleCategorySelect}
       />
       
-      {loading ? (
-        <div className="text-center py-12">
-          <p className="text-gray-500 text-lg">Loading menu items...</p>
+      {isLoading || cartLoading ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {[1, 2, 3, 4, 5, 6].map((item) => (
+            <div key={item}>
+              {renderFoodCardSkeleton()}
+            </div>
+          ))}
         </div>
       ) : (
         <>
