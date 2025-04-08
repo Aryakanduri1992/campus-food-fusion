@@ -18,3 +18,15 @@ export interface DeliveryPartner {
   email: string;
   status: 'Available' | 'Busy';
 }
+
+// Additional types for order management
+export interface AssignDeliveryPartnerRequest {
+  orderId: string;
+  partnerId: string;
+  estimatedTime: string;
+}
+
+export interface OrderStatusUpdateRequest {
+  orderId: string;
+  status: string;
+}

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useCart } from '@/context/CartContext';
@@ -38,7 +37,6 @@ const Payment = () => {
     estimatedTime: "30-45 minutes"
   };
 
-  // Fetch cart data when component mounts
   useEffect(() => {
     const loadCart = async () => {
       setIsLoading(true);
@@ -49,7 +47,6 @@ const Payment = () => {
     loadCart();
   }, [fetchCart]);
 
-  // Check if we have an order ID or cart items
   useEffect(() => {
     if (!isLoading && cart.length === 0 && !orderId) {
       toast("Your cart is empty. Please add items before proceeding to payment.");
@@ -57,7 +54,6 @@ const Payment = () => {
     }
   }, [cart, navigate, isLoading, orderId]);
 
-  // Check if location data is available
   useEffect(() => {
     if (!isLoading && !locationData && !orderId) {
       toast("Please enter your delivery details first.");
@@ -65,7 +61,6 @@ const Payment = () => {
     }
   }, [locationData, navigate, isLoading, orderId]);
 
-  // Simulate payment progress
   useEffect(() => {
     if (processingPayment) {
       const interval = setInterval(() => {
@@ -83,17 +78,19 @@ const Payment = () => {
     }
   }, [processingPayment]);
 
-  // Complete payment when progress reaches 100%
   useEffect(() => {
     if (progressValue === 100 && processingPayment) {
       const timer = setTimeout(async () => {
         try {
-          // Update order status in database
           if (orderId) {
             const { error } = await supabase
               .from('orders')
               .update({ 
-                status: 'Processing'
+                status: 'Processing',
+                delivery_address: locationData?.address,
+                delivery_city: locationData?.city,
+                delivery_pincode: locationData?.pincode,
+                delivery_instructions: locationData?.instructions
               })
               .eq('id', orderId);
               
@@ -101,7 +98,7 @@ const Payment = () => {
               throw error;
             }
             
-            console.log("Order status updated to Processing");
+            console.log("Order status updated to Processing with delivery details");
           }
           
           setProcessingPayment(false);
@@ -117,7 +114,7 @@ const Payment = () => {
       
       return () => clearTimeout(timer);
     }
-  }, [progressValue, processingPayment, orderId]);
+  }, [progressValue, processingPayment, orderId, locationData]);
 
   const handlePayment = async () => {
     if (paymentMethod === 'card' && (!cardNumber || !expiryDate || !cvv || !nameOnCard)) {
@@ -129,12 +126,7 @@ const Payment = () => {
     setProgressValue(0);
     
     try {
-      // For demo purposes, we just process the payment
-      // In a real app, this would connect to a payment provider
       console.log("Processing payment for order:", orderId);
-      
-      // Progress will continue and complete via the useEffect above
-      
     } catch (error) {
       setProcessingPayment(false);
       setProgressValue(0);
@@ -179,7 +171,6 @@ const Payment = () => {
     }
   };
 
-  // Show loading state while cart is being fetched
   if (isLoading) {
     return (
       <div className="container mx-auto py-16 px-4 flex flex-col items-center justify-center">
