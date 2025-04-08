@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
@@ -54,7 +55,7 @@ interface DeliveryPartner {
 }
 
 const Owner = () => {
-  const { user, userRole } = useAuth();
+  const { user, userRole, checkUserRole } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
@@ -269,7 +270,7 @@ const Owner = () => {
 
       console.log("Owner role assigned successfully to:", email);
       
-      // Force refresh roles
+      // Force refresh roles - now using the checkUserRole from useAuth
       if (user) {
         const updatedRole = await checkUserRole();
         console.log("Updated role:", updatedRole);
