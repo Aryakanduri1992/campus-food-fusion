@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
@@ -48,8 +47,8 @@ interface OrderWithItems {
 
 interface DeliveryPartner {
   id: string;
-  name: string;
-  phone: string;
+  partner_name?: string;
+  phone_number?: string;
   email: string;
   status: 'Available' | 'Busy';
 }
@@ -84,20 +83,20 @@ const Owner = () => {
 
   const fetchDeliveryPartners = async () => {
     try {
-      const { data: emailsData, error: emailsError } = await supabase
+      const { data, error } = await supabase
         .from('delivery_partners_emails')
         .select('*');
       
-      if (emailsError) {
-        console.error("Error fetching delivery partner emails:", emailsError);
+      if (error) {
+        console.error("Error fetching delivery partners:", error);
         return;
       }
       
       // Transform the data into the format we need
-      const formattedPartners: DeliveryPartner[] = emailsData.map((item: any, index: number) => ({
+      const formattedPartners: DeliveryPartner[] = data.map((item: any) => ({
         id: item.id,
-        name: `Partner ${index + 1}`,
-        phone: '(Phone not available)',
+        partner_name: item.partner_name || `Partner ${item.id.substring(0, 4)}`,
+        phone_number: item.phone_number || '(Phone not available)',
         email: item.email,
         status: 'Available' as const
       }));
@@ -292,21 +291,23 @@ const Owner = () => {
   };
 
   const addNewPartner = async () => {
-    if (!newPartner.name || !newPartner.phone || !newPartner.email) {
+    if (!newPartner.email || !newPartner.email.includes('@')) {
       toast({
         title: "Missing Information",
-        description: "Please enter name, phone number, and email",
+        description: "Please enter a valid email address",
         variant: "destructive"
       });
       return;
     }
 
     try {
-      // First, create a placeholder entry in delivery_partners_emails
+      // Store the partner details in the delivery_partners_emails table
       const { data: insertData, error: insertError } = await supabase
         .from('delivery_partners_emails')
         .insert({
-          email: newPartner.email
+          email: newPartner.email,
+          partner_name: newPartner.name || null,
+          phone_number: newPartner.phone || null
         })
         .select();
         
@@ -325,8 +326,8 @@ const Owner = () => {
       // Add to local state
       setPartners([...partners, { 
         id: newId, 
-        name: newPartner.name, 
-        phone: newPartner.phone,
+        partner_name: newPartner.name, 
+        phone_number: newPartner.phone,
         email: newPartner.email,
         status: 'Available' 
       }]);
@@ -659,8 +660,8 @@ const Owner = () => {
                   <TableBody>
                     {partners.map(partner => (
                       <TableRow key={partner.id}>
-                        <TableCell className="font-medium">{partner.name}</TableCell>
-                        <TableCell>{partner.phone}</TableCell>
+                        <TableCell className="font-medium">{partner.partner_name}</TableCell>
+                        <TableCell>{partner.phone_number}</TableCell>
                         <TableCell>{partner.email}</TableCell>
                         <TableCell>
                           <span className={`px-2 py-1 rounded text-xs font-semibold

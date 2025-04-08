@@ -24,11 +24,15 @@ interface DeliveryPartner {
   id: string;
   email: string;
   created_at: string;
+  partner_name?: string;
+  phone_number?: string;
 }
 
 const UserRoleManager: React.FC<UserRoleManagerProps> = ({ onRoleAssigned }) => {
   const { toast } = useToast();
   const [email, setEmail] = useState('');
+  const [partnerName, setPartnerName] = useState('');
+  const [phoneNumber, setPhoneNumber] = useState('');
   const [loading, setLoading] = useState(false);
   const [loadingPartners, setLoadingPartners] = useState(true);
   const [deliveryPartners, setDeliveryPartners] = useState<DeliveryPartner[]>([]);
@@ -43,14 +47,14 @@ const UserRoleManager: React.FC<UserRoleManagerProps> = ({ onRoleAssigned }) => 
     try {
       setLoadingPartners(true);
       
-      // Get all delivery partner roles
-      const { data: roleData, error: roleError } = await supabase
-        .from('user_roles')
-        .select('id, user_id, role, created_at')
-        .eq('role', 'delivery_partner');
+      // Get all delivery partner roles from delivery_partners_emails table
+      const { data, error } = await supabase
+        .from('delivery_partners_emails')
+        .select('*')
+        .order('created_at', { ascending: false });
         
-      if (roleError) {
-        console.error("Error fetching delivery partners:", roleError);
+      if (error) {
+        console.error("Error fetching delivery partners:", error);
         toast({
           title: "Error",
           description: "Could not load delivery partners",
@@ -59,36 +63,8 @@ const UserRoleManager: React.FC<UserRoleManagerProps> = ({ onRoleAssigned }) => 
         return;
       }
       
-      // Fetch the delivery partners' emails
-      const { data: emailData, error: emailError } = await supabase
-        .from('delivery_partners_emails')
-        .select('*');
-      
-      if (emailError) {
-        console.error("Error fetching delivery partner emails:", emailError);
-        // Table might not exist yet, continue with what we have
-      }
-      
-      // Convert the data to our expected format
-      let partnersData: DeliveryPartner[] = [];
-      
-      if (roleData) {
-        partnersData = roleData.map(role => {
-          // Try to find the email from our delivery_partners_emails table
-          const emailEntry = emailData ? 
-            emailData.find((e: { role_id: string, email: string }) => e.role_id === role.id) : 
-            null;
-          
-          return {
-            id: role.id,
-            email: emailEntry ? emailEntry.email : "Email not available",
-            created_at: role.created_at
-          };
-        });
-      }
-      
-      console.log("Fetched delivery partners:", partnersData);
-      setDeliveryPartners(partnersData);
+      console.log("Fetched delivery partners:", data);
+      setDeliveryPartners(data || []);
     } catch (error) {
       console.error("Unexpected error fetching delivery partners:", error);
     } finally {
@@ -148,42 +124,53 @@ const UserRoleManager: React.FC<UserRoleManagerProps> = ({ onRoleAssigned }) => 
         console.log("Found user ID:", userId, "and role ID:", roleId);
       }
       
-      // Store the email in the delivery_partners_emails table
-      if (roleId) {
-        const { error: insertError } = await supabase
-          .from('delivery_partners_emails')
-          .insert({
-            role_id: roleId,
-            email: email
-          });
+      // Store the email, name, and phone number in the delivery_partners_emails table
+      const { error: insertError } = await supabase
+        .from('delivery_partners_emails')
+        .insert({
+          email: email,
+          role_id: roleId,
+          partner_name: partnerName || null,
+          phone_number: phoneNumber || null
+        });
 
-        if (insertError) {
-          console.error("Error storing email:", insertError);
-        } else {
-          console.log("Email stored successfully");
-        }
+      if (insertError) {
+        console.error("Error storing partner details:", insertError);
+        toast({
+          title: "Error",
+          description: "Failed to store partner details, but role was assigned",
+          variant: "destructive"
+        });
+      } else {
+        console.log("Partner details stored successfully");
       }
 
       // Add to local state for immediate UI update
-      const newId = roleId || 'temp-' + Date.now();
+      const newId = Date.now().toString();
       setDeliveryPartners(prev => [
-        ...prev,
         {
           id: newId,
           email: email,
+          partner_name: partnerName,
+          phone_number: phoneNumber,
           created_at: new Date().toISOString()
-        }
+        },
+        ...prev
       ]);
 
       toast({
         title: "Role Assigned",
-        description: `Successfully assigned delivery partner role to ${email}`,
+        description: `Successfully assigned delivery partner role to ${partnerName || email}`,
       });
       
       // Refresh the list to get the actual data
       setTimeout(fetchDeliveryPartners, 1000);
       
+      // Reset form
       setEmail('');
+      setPartnerName('');
+      setPhoneNumber('');
+      
       if (onRoleAssigned) onRoleAssigned();
     } catch (error) {
       console.error("Unexpected error:", error);
@@ -205,25 +192,52 @@ const UserRoleManager: React.FC<UserRoleManagerProps> = ({ onRoleAssigned }) => 
       </CardHeader>
       <CardContent>
         <div className="space-y-6">
-          <div className={`flex ${isMobile ? 'flex-col' : 'items-center'} ${isMobile ? 'space-y-2' : 'space-x-2'}`}>
-            <Input
-              placeholder="User Email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              disabled={loading}
-              className={isMobile ? 'w-full' : 'flex-grow'}
-            />
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <label htmlFor="partner-name" className="text-sm font-medium">Partner Name</label>
+              <Input
+                id="partner-name"
+                placeholder="Full Name"
+                value={partnerName}
+                onChange={(e) => setPartnerName(e.target.value)}
+                disabled={loading}
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <label htmlFor="partner-phone" className="text-sm font-medium">Phone Number</label>
+              <Input
+                id="partner-phone"
+                placeholder="10-digit phone number" 
+                value={phoneNumber}
+                onChange={(e) => setPhoneNumber(e.target.value)}
+                disabled={loading}
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <label htmlFor="partner-email" className="text-sm font-medium">Email Address</label>
+              <Input
+                id="partner-email"
+                placeholder="Email Address (required)"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                disabled={loading}
+                required
+              />
+            </div>
+            
             <Button 
               onClick={assignDeliveryPartnerRole} 
               disabled={loading}
-              className={`bg-rv-burgundy hover:bg-rv-burgundy/90 ${isMobile ? 'w-full' : ''}`}
+              className="w-full bg-rv-burgundy hover:bg-rv-burgundy/90"
             >
               {loading ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
                 <>
                   <UserPlus className="h-4 w-4 mr-2" />
-                  Assign Role
+                  Assign Delivery Partner Role
                 </>
               )}
             </Button>
@@ -239,6 +253,8 @@ const UserRoleManager: React.FC<UserRoleManagerProps> = ({ onRoleAssigned }) => 
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Phone</TableHead>
                     <TableHead>Email</TableHead>
                     <TableHead>Assigned On</TableHead>
                   </TableRow>
@@ -247,13 +263,15 @@ const UserRoleManager: React.FC<UserRoleManagerProps> = ({ onRoleAssigned }) => 
                   {deliveryPartners.length > 0 ? (
                     deliveryPartners.map((partner) => (
                       <TableRow key={partner.id}>
+                        <TableCell>{partner.partner_name || "Not provided"}</TableCell>
+                        <TableCell>{partner.phone_number || "Not provided"}</TableCell>
                         <TableCell>{partner.email}</TableCell>
                         <TableCell>{new Date(partner.created_at).toLocaleDateString()}</TableCell>
                       </TableRow>
                     ))
                   ) : (
                     <TableRow>
-                      <TableCell colSpan={2} className="text-center py-4 text-gray-500">
+                      <TableCell colSpan={4} className="text-center py-4 text-gray-500">
                         No delivery partners assigned yet
                       </TableCell>
                     </TableRow>
