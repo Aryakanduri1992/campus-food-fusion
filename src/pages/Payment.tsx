@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -8,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 import AuthHeader from '@/components/AuthHeader';
 import { useAuth } from '@/context/AuthContext';
+import DeliveryTracking from '@/components/DeliveryTracking';
 
 const Payment: React.FC = () => {
   const navigate = useNavigate();
@@ -15,6 +15,7 @@ const Payment: React.FC = () => {
   const { user } = useAuth();
   const orderId = location.state?.orderId;
   const totalAmount = location.state?.totalAmount || 0;
+  const locationData = location.state?.locationData;
   
   const [paymentDetails, setPaymentDetails] = useState({
     cardName: '',
@@ -24,6 +25,7 @@ const Payment: React.FC = () => {
   });
   
   const [loading, setLoading] = useState(false);
+  const [orderPlaced, setOrderPlaced] = useState(false);
   
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -36,12 +38,10 @@ const Payment: React.FC = () => {
   const handleCardNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     let value = e.target.value.replace(/\D/g, '');
     
-    // Add spaces after every 4 digits
     if (value.length > 0) {
       value = value.match(/.{1,4}/g)?.join(' ') || value;
     }
     
-    // Limit to 19 characters (16 digits + 3 spaces)
     if (value.length <= 19) {
       setPaymentDetails(prev => ({
         ...prev,
@@ -79,7 +79,6 @@ const Payment: React.FC = () => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Simple validation
     if (!paymentDetails.cardName.trim()) {
       toast.error('Please enter cardholder name');
       return;
@@ -102,15 +101,51 @@ const Payment: React.FC = () => {
     
     setLoading(true);
     
-    // Simulate payment processing
     setTimeout(() => {
       setLoading(false);
+      setOrderPlaced(true);
       toast.success('Payment successful!');
-      navigate('/orders');
     }, 1500);
   };
   
-  if (!orderId) {
+  if (orderPlaced) {
+    return (
+      <div className="container mx-auto px-4 py-8 mb-16 md:mb-0">
+        <div className="max-w-md mx-auto">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-center text-green-600">Order Confirmed!</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="text-center mb-4">
+                <p className="mb-2">Your order has been successfully placed.</p>
+                <p className="text-sm text-gray-500">Order ID: {orderId?.substring(0, 8)}</p>
+              </div>
+              
+              <DeliveryTracking orderId={orderId} />
+              
+              <div className="mt-4 p-4 bg-gray-50 rounded-md">
+                <h3 className="font-semibold mb-2">Delivery Address:</h3>
+                <p className="text-sm">{locationData?.address}</p>
+                {locationData?.landmark && <p className="text-sm text-gray-600">Landmark: {locationData.landmark}</p>}
+                <p className="text-sm">{locationData?.city}, {locationData.pincode}</p>
+                {locationData?.instructions && <p className="text-sm italic mt-2">"{locationData.instructions}"</p>}
+              </div>
+              
+              <Button 
+                className="w-full mt-6"
+                onClick={() => navigate('/orders')}
+              >
+                View All Orders
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+  
+  if (!orderId || !locationData) {
     return (
       <div className="container mx-auto px-4 py-12 mb-16 md:mb-0">
         <Card className="max-w-md mx-auto">
@@ -118,7 +153,7 @@ const Payment: React.FC = () => {
             <CardTitle className="text-center text-rv-navy">Invalid Order</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4 text-center">
-            <p>No order information found.</p>
+            <p>No order or location information found.</p>
             <Button onClick={() => navigate('/menu')}>Browse Menu</Button>
           </CardContent>
         </Card>
@@ -145,6 +180,13 @@ const Payment: React.FC = () => {
                 <span className="font-semibold">Total Amount:</span>
                 <span className="font-bold text-rv-burgundy">₹{totalAmount.toFixed(2)}</span>
               </div>
+            </div>
+            
+            <div className="mb-4 p-4 bg-gray-50 rounded-md">
+              <h3 className="font-semibold mb-2">Delivery To:</h3>
+              <p className="text-sm">{locationData.address}</p>
+              {locationData.landmark && <p className="text-sm text-gray-600">Landmark: {locationData.landmark}</p>}
+              <p className="text-sm">{locationData.city}, {locationData.pincode}</p>
             </div>
             
             <form onSubmit={handleSubmit} className="space-y-4">
@@ -211,10 +253,15 @@ const Payment: React.FC = () => {
                 type="button"
                 variant="outline"
                 className="w-full mt-2"
-                onClick={() => navigate('/cart')}
+                onClick={() => navigate('/location', { 
+                  state: { 
+                    orderId: orderId,
+                    totalAmount: totalAmount
+                  } 
+                })}
                 disabled={loading}
               >
-                Back to Cart
+                Back to Delivery Details
               </Button>
             </form>
           </CardContent>

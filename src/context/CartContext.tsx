@@ -1,6 +1,5 @@
-
 import React, { createContext, useState, useContext, ReactNode, useEffect } from 'react';
-import { CartItem, FoodItem, DbCartItem, DbOrderItem, Database } from '../types';
+import { CartItem, FoodItem, DbCartItem, DbOrderItem, Database, FoodCategory } from '../types';
 import { toast } from "sonner";
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/AuthContext';
@@ -25,11 +24,9 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const { user } = useAuth();
   const [cartId, setCartId] = useState<string | null>(null);
   
-  // Fetch cart from database when user logs in
   useEffect(() => {
     const fetchCart = async () => {
       if (!user) {
-        // Clear local cart when user logs out
         setCart([]);
         setCartId(null);
         return;
@@ -37,7 +34,6 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       
       setLoading(true);
       try {
-        // Check if user has an existing cart
         const { data: existingCarts, error: cartsError } = await supabase
           .from('carts')
           .select('*')
@@ -50,11 +46,9 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         let currentCartId;
         
         if (existingCarts && existingCarts.length > 0) {
-          // Use the existing cart
           currentCartId = existingCarts[0].id;
           setCartId(currentCartId);
           
-          // Fetch cart items
           const { data: cartItems, error: itemsError } = await supabase
             .from('cart_items')
             .select('*')
@@ -63,15 +57,14 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           if (itemsError) throw itemsError;
             
           if (cartItems && cartItems.length > 0) {
-            // Convert database items to CartItem format
             const formattedItems: CartItem[] = cartItems.map((item: DbCartItem) => ({
               foodItem: {
                 id: item.food_item_id,
                 name: item.food_name,
                 price: item.food_price,
                 imageUrl: item.food_image_url,
-                category: 'Veg' as FoodCategory, // Default category as it's not stored in DB
-                description: '' // Default description as it's not stored in DB
+                category: 'Veg' as FoodCategory,
+                description: ''
               },
               quantity: item.quantity
             }));
@@ -79,7 +72,6 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             setCart(formattedItems);
           }
         } else if (user) {
-          // Create a new cart if user is logged in
           const { data: newCart, error: newCartError } = await supabase
             .from('carts')
             .insert({ user_id: user.id })
@@ -104,13 +96,11 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     fetchCart();
   }, [user]);
   
-  // Sync cart changes to database
   const syncCartToDatabase = async (updatedCart: CartItem[]) => {
     if (!user || !cartId) return;
     
     setLoading(true);
     try {
-      // Delete all existing cart items
       const { error: deleteError } = await supabase
         .from('cart_items')
         .delete()
@@ -118,7 +108,6 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         
       if (deleteError) throw deleteError;
         
-      // Insert new cart items
       if (updatedCart.length > 0) {
         const cartItemsToInsert = updatedCart.map(item => ({
           cart_id: cartId,
@@ -148,7 +137,6 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       
       let updatedCart;
       if (existingItem) {
-        // If item already exists, increase quantity
         updatedCart = prevCart.map(item => 
           item.foodItem.id === foodItem.id 
             ? { ...item, quantity: item.quantity + 1 } 
@@ -156,12 +144,10 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         );
         toast.success(`Added ${foodItem.name} to cart`);
       } else {
-        // If item doesn't exist, add it with quantity 1
         updatedCart = [...prevCart, { foodItem, quantity: 1 }];
         toast.success(`Added ${foodItem.name} to cart`);
       }
       
-      // Sync with database if user is logged in
       syncCartToDatabase(updatedCart);
       
       return updatedCart;
@@ -177,7 +163,6 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       
       const updatedCart = prevCart.filter(item => item.foodItem.id !== foodItemId);
       
-      // Sync with database if user is logged in
       syncCartToDatabase(updatedCart);
       
       return updatedCart;
@@ -197,7 +182,6 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           : item
       );
       
-      // Sync with database if user is logged in
       syncCartToDatabase(updatedCart);
       
       return updatedCart;
@@ -207,7 +191,6 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const clearCart = () => {
     setCart([]);
     
-    // Sync with database if user is logged in
     if (user && cartId) {
       supabase
         .from('cart_items')
@@ -246,7 +229,6 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     
     setLoading(true);
     try {
-      // Create order
       const { data: newOrder, error: orderError } = await supabase
         .from('orders')
         .insert({
@@ -260,7 +242,6 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         throw orderError || new Error('Failed to create order');
       }
       
-      // Create order items
       const orderItems = cart.map(item => ({
         order_id: newOrder.id,
         food_item_id: item.foodItem.id,
@@ -278,7 +259,6 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         throw itemsError;
       }
       
-      // Clear cart after successful order
       const { error: clearError } = await supabase
         .from('cart_items')
         .delete()

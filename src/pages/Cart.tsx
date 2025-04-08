@@ -22,7 +22,8 @@ const Cart: React.FC = () => {
     
     const orderId = await placeOrder();
     if (orderId) {
-      navigate('/payment', { 
+      // Navigate to location page instead of payment
+      navigate('/location', { 
         state: { 
           orderId: orderId,
           totalAmount: getTotalPrice()
