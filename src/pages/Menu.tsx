@@ -13,7 +13,7 @@ const Menu: React.FC = () => {
   
   const [selectedCategory, setSelectedCategory] = useState<string>(initialCategory);
   const [filteredItems, setFilteredItems] = useState(mockFoodItems);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const { loading: cartLoading } = useCart();
   
   const categories = ['All', 'Veg', 'Non-Veg', 'Beverage'];
