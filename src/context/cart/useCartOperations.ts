@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { CartItem, CartState } from './types';
 import { toast } from "sonner";
@@ -54,15 +53,18 @@ export function useCartOperations(user: User | null) {
   const fetchCart = async () => {
     console.log('Fetching cart, user:', user?.id);
     
-    if (!user) {
-      // If user is not logged in, try to get cart from local storage
-      const savedCart = loadCartFromLocalStorage();
-      setState(prev => ({ ...prev, cart: savedCart, cartId: null }));
-      return;
-    }
-    
     setState(prev => ({ ...prev, loading: true }));
+    
     try {
+      if (!user) {
+        // If user is not logged in, try to get cart from local storage
+        const savedCart = loadCartFromLocalStorage();
+        console.log('Loaded cart from local storage:', savedCart);
+        setState(prev => ({ ...prev, cart: savedCart, cartId: null }));
+        return;
+      }
+      
+      // User is logged in, try to get cart from database
       const { data: existingCarts, error: cartsError } = await supabase
         .from('carts')
         .select('*')
@@ -96,10 +98,17 @@ export function useCartOperations(user: User | null) {
           // Also save to local storage
           saveCartToLocalStorage(formattedItems);
         } else {
-          // Cart exists but is empty
-          console.log('Cart exists but is empty');
-          setState(prev => ({ ...prev, cart: [], cartId: currentCartId }));
-          saveCartToLocalStorage([]);
+          // Cart exists but is empty - check if there's something in local storage
+          console.log('Cart exists but is empty, checking local storage');
+          const savedCart = loadCartFromLocalStorage();
+          if (savedCart && savedCart.length > 0) {
+            console.log('Found items in local storage, syncing to DB');
+            setState(prev => ({ ...prev, cart: savedCart, cartId: currentCartId }));
+            await syncCartToDatabase(savedCart, currentCartId);
+          } else {
+            setState(prev => ({ ...prev, cart: [], cartId: currentCartId }));
+            saveCartToLocalStorage([]);
+          }
         }
       } else if (user) {
         console.log('Creating new cart for user:', user.id);
@@ -125,7 +134,10 @@ export function useCartOperations(user: User | null) {
       }
     } catch (error) {
       console.error('Error fetching cart:', error);
-      toast.error('Failed to load your cart');
+      // Fall back to local storage on error
+      const savedCart = loadCartFromLocalStorage();
+      setState(prev => ({ ...prev, cart: savedCart || [] }));
+      toast.error('Failed to load your cart from server, using local data');
     } finally {
       setState(prev => ({ ...prev, loading: false }));
     }

@@ -7,12 +7,15 @@ import { Minus, Plus, Trash2, ShoppingBag, Loader2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from "sonner";
 import { useAuth } from '@/context/AuthContext';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const Cart: React.FC = () => {
   const { cart, removeFromCart, updateQuantity, clearCart, getTotalPrice, placeOrder, loading, fetchCart } = useCart();
   const { user } = useAuth();
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(true);
+  const [retryCount, setRetryCount] = useState(0);
+  const [cartLoaded, setCartLoaded] = useState(false);
 
   // Fetch cart data when component mounts
   useEffect(() => {
@@ -20,9 +23,15 @@ const Cart: React.FC = () => {
       setIsLoading(true);
       try {
         await fetchCart();
+        setCartLoaded(true);
       } catch (error) {
         console.error('Error fetching cart:', error);
-        toast.error('Failed to load your cart items');
+        if (retryCount < 3) {
+          // Retry fetching cart up to 3 times
+          setRetryCount(prev => prev + 1);
+        } else {
+          toast.error('Failed to load your cart items');
+        }
       } finally {
         // Make sure to set loading to false even if there's an error
         setIsLoading(false);
@@ -33,11 +42,14 @@ const Cart: React.FC = () => {
     
     // Log cart state for debugging
     console.log('Cart component mounted, current cart:', cart);
-  }, [fetchCart]);
+  }, [fetchCart, retryCount]);
 
   // Add a second useEffect to log cart changes
   useEffect(() => {
     console.log('Cart updated:', cart);
+    if (cart.length > 0) {
+      setCartLoaded(true);
+    }
   }, [cart]);
 
   const handlePlaceOrder = async () => {
@@ -59,13 +71,61 @@ const Cart: React.FC = () => {
     }
   };
 
-  // Only show loading state if isLoading is true
-  if (isLoading) {
+  // Show clear loading state with skeletons
+  if (isLoading && !cartLoaded) {
     return (
-      <div className="container mx-auto px-4 py-12 flex flex-col items-center justify-center mb-16 md:mb-0">
-        <Loader2 size={64} className="text-rv-navy mb-4 animate-spin" />
-        <h2 className="text-2xl font-bold mb-2">Loading your cart</h2>
-        <p className="text-gray-500">Please wait while we retrieve your items...</p>
+      <div className="container mx-auto px-4 py-12 flex flex-col mb-16 md:mb-0">
+        <h1 className="text-3xl font-bold mb-8">Your Cart</h1>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <div className="lg:col-span-2">
+            {[1, 2].map((i) => (
+              <Card key={i} className="mb-4">
+                <CardContent className="p-4">
+                  <div className="flex flex-col sm:flex-row items-start gap-4">
+                    <Skeleton className="w-24 h-24 rounded" />
+                    <div className="flex-grow w-full">
+                      <div className="flex justify-between items-start">
+                        <Skeleton className="h-6 w-32 mb-2" />
+                        <Skeleton className="h-6 w-16" />
+                      </div>
+                      <Skeleton className="h-4 w-full mb-4" />
+                      <div className="flex justify-between items-center mt-4">
+                        <div className="flex items-center">
+                          <Skeleton className="h-8 w-8 rounded-full" />
+                          <Skeleton className="h-6 w-6 mx-3" />
+                          <Skeleton className="h-8 w-8 rounded-full" />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+          <div>
+            <Card>
+              <CardContent className="p-6">
+                <h3 className="text-xl font-bold mb-4">Order Summary</h3>
+                <div className="space-y-3 mb-6">
+                  {[1, 2].map((i) => (
+                    <div key={i} className="flex justify-between">
+                      <Skeleton className="h-4 w-32" />
+                      <Skeleton className="h-4 w-16" />
+                    </div>
+                  ))}
+                </div>
+                <div className="border-t pt-4">
+                  <div className="flex justify-between font-bold text-lg">
+                    <Skeleton className="h-6 w-16" />
+                    <Skeleton className="h-6 w-24" />
+                  </div>
+                </div>
+                <Skeleton className="h-10 w-full mt-6" />
+                <Skeleton className="h-10 w-full mt-3" />
+              </CardContent>
+            </Card>
+          </div>
+        </div>
       </div>
     );
   }
