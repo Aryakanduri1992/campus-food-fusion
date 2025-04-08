@@ -68,6 +68,35 @@ export type Database = {
         }
         Relationships: []
       }
+      delivery_partners_emails: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          role_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id?: string
+          role_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          role_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "delivery_partners_emails_role_id_fkey"
+            columns: ["role_id"]
+            isOneToOne: false
+            referencedRelation: "user_roles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       order_items: {
         Row: {
           created_at: string
