@@ -1,6 +1,6 @@
 
 import React, { createContext, useState, useContext, ReactNode, useEffect } from 'react';
-import { CartItem, FoodItem } from '../types';
+import { CartItem, FoodItem, DbCartItem, DbOrderItem } from '../types';
 import { toast } from "sonner";
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/AuthContext';
@@ -38,12 +38,14 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setLoading(true);
       try {
         // Check if user has an existing cart
-        const { data: existingCarts } = await supabase
+        const { data: existingCarts, error: cartsError } = await supabase
           .from('carts')
           .select('*')
           .eq('user_id', user.id)
           .order('created_at', { ascending: false })
           .limit(1);
+          
+        if (cartsError) throw cartsError;
           
         let currentCartId;
         
@@ -53,20 +55,22 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           setCartId(currentCartId);
           
           // Fetch cart items
-          const { data: cartItems } = await supabase
+          const { data: cartItems, error: itemsError } = await supabase
             .from('cart_items')
             .select('*')
             .eq('cart_id', currentCartId);
             
+          if (itemsError) throw itemsError;
+            
           if (cartItems && cartItems.length > 0) {
             // Convert database items to CartItem format
-            const formattedItems: CartItem[] = cartItems.map(item => ({
+            const formattedItems: CartItem[] = cartItems.map((item: DbCartItem) => ({
               foodItem: {
                 id: item.food_item_id,
                 name: item.food_name,
                 price: item.food_price,
                 imageUrl: item.food_image_url,
-                category: 'Veg', // Default category as it's not stored in DB
+                category: 'Veg' as FoodCategory, // Default category as it's not stored in DB
                 description: '' // Default description as it's not stored in DB
               },
               quantity: item.quantity
@@ -76,11 +80,13 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           }
         } else if (user) {
           // Create a new cart if user is logged in
-          const { data: newCart } = await supabase
+          const { data: newCart, error: newCartError } = await supabase
             .from('carts')
             .insert({ user_id: user.id })
             .select()
             .single();
+            
+          if (newCartError) throw newCartError;
             
           if (newCart) {
             setCartId(newCart.id);
@@ -105,10 +111,12 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setLoading(true);
     try {
       // Delete all existing cart items
-      await supabase
+      const { error: deleteError } = await supabase
         .from('cart_items')
         .delete()
         .eq('cart_id', cartId);
+        
+      if (deleteError) throw deleteError;
         
       // Insert new cart items
       if (updatedCart.length > 0) {
@@ -121,9 +129,11 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           quantity: item.quantity
         }));
         
-        await supabase
+        const { error: insertError } = await supabase
           .from('cart_items')
           .insert(cartItemsToInsert);
+          
+        if (insertError) throw insertError;
       }
     } catch (error) {
       console.error('Error syncing cart:', error);
@@ -269,10 +279,14 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       }
       
       // Clear cart after successful order
-      await supabase
+      const { error: clearError } = await supabase
         .from('cart_items')
         .delete()
         .eq('cart_id', cartId);
+        
+      if (clearError) {
+        console.error('Error clearing cart:', clearError);
+      }
         
       setCart([]);
       

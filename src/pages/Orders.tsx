@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { formatDistanceToNow } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/AuthContext';
-import { Order } from '@/types';
+import { Order, OrderStatus, DbOrderItem } from '@/types';
 import { ShoppingBag } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
@@ -37,17 +37,22 @@ const Orders: React.FC = () => {
           // For each order, fetch its items
           const ordersWithItems = await Promise.all(
             ordersData.map(async (order) => {
-              const { data: itemsData } = await supabase
+              const { data: itemsData, error: itemsError } = await supabase
                 .from('order_items')
                 .select('*')
                 .eq('order_id', order.id);
 
+              if (itemsError) {
+                console.error('Error fetching order items:', itemsError);
+                return null;
+              }
+
               return {
                 id: order.id,
-                status: order.status,
+                status: order.status as OrderStatus,
                 totalPrice: order.total_price,
                 timestamp: order.created_at,
-                items: (itemsData || []).map(item => ({
+                items: (itemsData || []).map((item: DbOrderItem) => ({
                   quantity: item.quantity,
                   foodItem: {
                     id: item.food_item_id,
@@ -62,7 +67,9 @@ const Orders: React.FC = () => {
             })
           );
 
-          setOrders(ordersWithItems);
+          // Filter out any null results
+          const validOrders = ordersWithItems.filter(order => order !== null) as Order[];
+          setOrders(validOrders);
         }
       } catch (error) {
         console.error('Error fetching orders:', error);
