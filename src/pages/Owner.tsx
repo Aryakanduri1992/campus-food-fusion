@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
@@ -67,19 +66,46 @@ const Owner = () => {
   const [estimatedTime, setEstimatedTime] = useState('30-45 minutes');
 
   useEffect(() => {
-    if (user && userRole !== 'owner') {
-      toast({
-        title: "Access Denied",
-        description: "You don't have permission to access this page",
-        variant: "destructive"
-      });
-      navigate('/');
-      return;
-    }
-
-    fetchOrders();
-    fetchDeliveryPartners();
-  }, [user, userRole, navigate]);
+    const checkAccess = async () => {
+      try {
+        if (user) {
+          const role = await checkUserRole();
+          console.log("Current user role:", role);
+          
+          if (role !== 'owner') {
+            toast({
+              title: "Access Denied",
+              description: "You don't have permission to access this page",
+              variant: "destructive"
+            });
+            navigate('/');
+            return;
+          }
+          
+          fetchOrders();
+          fetchDeliveryPartners();
+        } else {
+          toast({
+            title: "Authentication Required",
+            description: "Please log in to access this page",
+            variant: "destructive"
+          });
+          navigate('/auth');
+        }
+      } catch (error) {
+        console.error("Error checking access:", error);
+        toast({
+          title: "Error",
+          description: "An error occurred while checking permissions",
+          variant: "destructive"
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    checkAccess();
+  }, [user, navigate]);
 
   const fetchDeliveryPartners = async () => {
     try {
@@ -377,9 +403,10 @@ const Owner = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-screen">
-        <Loader2 className="h-8 w-8 animate-spin text-rv-burgundy" />
-        <span className="ml-2">Loading...</span>
+      <div className="flex flex-col items-center justify-center h-screen">
+        <Loader2 className="h-12 w-12 animate-spin text-rv-burgundy mb-4" />
+        <h2 className="text-xl font-semibold text-rv-navy">Loading Owner Dashboard...</h2>
+        <p className="text-gray-500 mt-2">Please wait while we prepare your dashboard</p>
       </div>
     );
   }
