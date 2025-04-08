@@ -34,7 +34,7 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 
 // Owner route component - only for users with owner role
 const OwnerRoute = ({ children }: { children: React.ReactNode }) => {
-  const { user, loading, userRole, refreshUserRole } = useAuth();
+  const { user, loading, isOwner, refreshUserRole } = useAuth();
   
   // Refresh user role when this component mounts
   React.useEffect(() => {
@@ -47,9 +47,9 @@ const OwnerRoute = ({ children }: { children: React.ReactNode }) => {
   
   if (!user) return <Navigate to="/auth" replace />;
   
-  console.log("OwnerRoute - Current userRole:", userRole);
+  console.log("OwnerRoute - Current userRole check:", isOwner);
   
-  if (userRole !== 'owner') {
+  if (!isOwner) {
     console.log("Access denied: User does not have owner role");
     return <Navigate to="/" replace />;
   }
@@ -60,7 +60,7 @@ const OwnerRoute = ({ children }: { children: React.ReactNode }) => {
 
 // Delivery partner route - for users with delivery_partner role
 const DeliveryPartnerRoute = ({ children }: { children: React.ReactNode }) => {
-  const { user, loading, userRole, refreshUserRole } = useAuth();
+  const { user, loading, isDeliveryPartner, refreshUserRole } = useAuth();
   
   // Refresh user role when this component mounts
   React.useEffect(() => {
@@ -73,7 +73,7 @@ const DeliveryPartnerRoute = ({ children }: { children: React.ReactNode }) => {
   
   if (!user) return <Navigate to="/auth" replace />;
   
-  if (userRole !== 'delivery_partner') return <Navigate to="/" replace />;
+  if (!isDeliveryPartner) return <Navigate to="/" replace />;
   
   return <>{children}</>;
 };

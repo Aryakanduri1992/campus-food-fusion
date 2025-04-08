@@ -13,6 +13,8 @@ type AuthContextType = {
   signOut: () => Promise<void>;
   checkUserRole: () => Promise<UserRole | null>;
   refreshUserRole: () => Promise<void>;
+  isDeliveryPartner: boolean;
+  isOwner: boolean;
 };
 
 const AuthContext = createContext<AuthContextType>({
@@ -23,6 +25,8 @@ const AuthContext = createContext<AuthContextType>({
   signOut: async () => {},
   checkUserRole: async () => null,
   refreshUserRole: async () => {},
+  isDeliveryPartner: false,
+  isOwner: false,
 });
 
 export const useAuth = () => useContext(AuthContext);
@@ -32,6 +36,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null);
   const [userRole, setUserRole] = useState<UserRole | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isDeliveryPartner, setIsDeliveryPartner] = useState(false);
+  const [isOwner, setIsOwner] = useState(false);
   const { toast } = useToast();
 
   const checkUserRole = async (): Promise<UserRole | null> => {
@@ -66,6 +72,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const role = await checkUserRole();
       console.log('User role after manual refresh:', role);
       setUserRole(role);
+      
+      // Update convenience flags
+      setIsDeliveryPartner(role === 'delivery_partner');
+      setIsOwner(role === 'owner');
     }
   };
 
@@ -81,8 +91,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           const role = await checkUserRole();
           console.log('User role from auth state change:', role);
           setUserRole(role);
+          
+          // Update convenience flags
+          setIsDeliveryPartner(role === 'delivery_partner');
+          setIsOwner(role === 'owner');
         } else {
           setUserRole(null);
+          setIsDeliveryPartner(false);
+          setIsOwner(false);
         }
         
         setLoading(false);
@@ -99,6 +115,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const role = await checkUserRole();
         console.log('User role from initial check:', role);
         setUserRole(role);
+        
+        // Update convenience flags
+        setIsDeliveryPartner(role === 'delivery_partner');
+        setIsOwner(role === 'owner');
       }
       
       setLoading(false);
@@ -132,7 +152,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       loading, 
       signOut, 
       checkUserRole,
-      refreshUserRole 
+      refreshUserRole,
+      isDeliveryPartner,
+      isOwner
     }}>
       {children}
     </AuthContext.Provider>
