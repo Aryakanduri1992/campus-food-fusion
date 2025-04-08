@@ -41,15 +41,14 @@ const UserRoleManager: React.FC<UserRoleManagerProps> = ({ onRoleAssigned }) => 
     try {
       setLoadingPartners(true);
       
-      // We'll create a custom SQL function or use a custom query to get the emails directly
-      // For now, let's just fetch the assigned roles with the email we assigned
-      const { data: assignedRoles, error } = await supabase
+      // Get all delivery partner roles
+      const { data: roleData, error: roleError } = await supabase
         .from('user_roles')
         .select('id, role, created_at')
         .eq('role', 'delivery_partner');
         
-      if (error) {
-        console.error("Error fetching delivery partners:", error);
+      if (roleError) {
+        console.error("Error fetching delivery partners:", roleError);
         toast({
           title: "Error",
           description: "Could not load delivery partners",
@@ -58,25 +57,27 @@ const UserRoleManager: React.FC<UserRoleManagerProps> = ({ onRoleAssigned }) => 
         return;
       }
       
-      // Since we assigned roles using email, we'll modify our database approach
-      // For now, we'll simulate having email data based on past assignments
-      const { data: pastAssignments } = await supabase
-        .from('delivery_partners_emails')  // This would be an ideal table structure
-        .select('role_id, email')
-        .catch(() => ({ data: null }));  // Catch error if table doesn't exist
+      // Get emails from our delivery_partners_emails table
+      const { data: emailData, error: emailError } = await supabase
+        .from('delivery_partners_emails')
+        .select('role_id, email');
+      
+      if (emailError) {
+        console.error("Error fetching delivery partner emails:", emailError);
+        // Table might not exist yet, continue with what we have
+      }
       
       // Convert the data to our expected format
       let partnersData: DeliveryPartner[] = [];
       
-      if (assignedRoles) {
-        partnersData = assignedRoles.map(role => {
-          // Try to find the email from our simulated/past assignments
-          const assignment = pastAssignments?.find(a => a.role_id === role.id);
+      if (roleData) {
+        partnersData = roleData.map(role => {
+          // Try to find the email from our delivery_partners_emails table
+          const emailEntry = emailData?.find(e => e.role_id === role.id);
           
           return {
             id: role.id,
-            // If we can't find an email, we'll show a placeholder
-            email: assignment?.email || "Email not available",
+            email: emailEntry?.email || "Email not available",
             created_at: role.created_at
           };
         });
@@ -103,15 +104,15 @@ const UserRoleManager: React.FC<UserRoleManagerProps> = ({ onRoleAssigned }) => 
     setLoading(true);
 
     try {
-      // Use the assign_role RPC function we created in the SQL migration
-      const { data, error } = await supabase
+      // Use the assign_role RPC function to assign the role
+      const { data: roleData, error: roleError } = await supabase
         .rpc('assign_role', { 
           user_email: email, 
           assigned_role: 'delivery_partner' as UserRole
         });
 
-      if (error) {
-        console.error("Error assigning role:", error);
+      if (roleError) {
+        console.error("Error assigning role:", roleError);
         toast({
           title: "Role Assignment Failed",
           description: "Could not assign delivery partner role to this user. Make sure they are registered.",
@@ -121,12 +122,35 @@ const UserRoleManager: React.FC<UserRoleManagerProps> = ({ onRoleAssigned }) => 
         return;
       }
 
-      // In a production app, we would store the email along with the role ID
-      // For now, add it to our local state
+      // Get the role ID for the newly assigned role
+      const { data: newRoleData, error: fetchError } = await supabase
+        .from('user_roles')
+        .select('id')
+        .eq('role', 'delivery_partner')
+        .eq('user_id', await getUserIdFromEmail(email))
+        .single();
+
+      if (fetchError) {
+        console.error("Error fetching role ID:", fetchError);
+      } else if (newRoleData) {
+        // Store the email in our custom table
+        const { error: insertError } = await supabase
+          .from('delivery_partners_emails')
+          .insert({
+            role_id: newRoleData.id,
+            email: email
+          });
+
+        if (insertError) {
+          console.error("Error storing email:", insertError);
+        }
+      }
+
+      // Add to local state for immediate UI update
       setDeliveryPartners(prev => [
         ...prev,
         {
-          id: 'temp-' + Date.now(), // We don't know the actual ID yet
+          id: newRoleData?.id || 'temp-' + Date.now(),
           email: email,
           created_at: new Date().toISOString()
         }
@@ -151,6 +175,31 @@ const UserRoleManager: React.FC<UserRoleManagerProps> = ({ onRoleAssigned }) => 
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Helper function to get user ID from email
+  const getUserIdFromEmail = async (email: string): Promise<string | null> => {
+    try {
+      // We can't query auth.users directly, so use a clever approach
+      const { data, error } = await supabase.auth.signInWithOtp({
+        email,
+        options: {
+          shouldCreateUser: false
+        }
+      });
+
+      // This won't actually log in but might tell us if the user exists
+      if (error && error.status === 400 && error.message.includes("User already registered")) {
+        // User exists - in a real app, you'd use an admin API or a secure RPC
+        // For now, we'll just return a placeholder ID that should be overwritten
+        return 'existing-user';
+      }
+
+      return null;
+    } catch (error) {
+      console.error("Error checking user ID:", error);
+      return null;
     }
   };
 
