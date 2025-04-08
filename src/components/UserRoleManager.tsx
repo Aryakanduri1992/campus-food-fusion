@@ -37,8 +37,9 @@ const UserRoleManager: React.FC<UserRoleManagerProps> = ({ onRoleAssigned }) => 
 
     try {
       // Use the assign_role RPC function we created in the SQL migration
+      // Use type assertion to tell TypeScript this is a valid function
       const { error } = await supabase
-        .rpc('assign_role', { 
+        .rpc('assign_role' as any, { 
           user_email: email, 
           assigned_role: 'delivery_partner' 
         });
