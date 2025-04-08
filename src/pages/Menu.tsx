@@ -6,6 +6,7 @@ import FoodCard from '@/components/FoodCard';
 import CategoryFilter from '@/components/CategoryFilter';
 import { useCart } from '@/context/CartContext';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Progress } from '@/components/ui/progress';
 
 const Menu: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -13,7 +14,7 @@ const Menu: React.FC = () => {
   
   const [selectedCategory, setSelectedCategory] = useState<string>(initialCategory);
   const [filteredItems, setFilteredItems] = useState(mockFoodItems);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const { loading: cartLoading } = useCart();
   
   const categories = ['All', 'Veg', 'Non-Veg', 'Beverage'];
@@ -68,13 +69,18 @@ const Menu: React.FC = () => {
       />
       
       {isLoading || cartLoading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {[1, 2, 3, 4, 5, 6].map((item) => (
-            <div key={item}>
-              {renderFoodCardSkeleton()}
-            </div>
-          ))}
-        </div>
+        <>
+          <div className="w-full my-4">
+            <Progress value={75} className="h-1 w-full bg-gray-200" />
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {[1, 2, 3, 4, 5, 6].map((item) => (
+              <div key={item}>
+                {renderFoodCardSkeleton()}
+              </div>
+            ))}
+          </div>
+        </>
       ) : (
         <>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

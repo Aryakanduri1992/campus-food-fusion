@@ -3,6 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { Navigate, Outlet } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/hooks/use-toast';
+import LoadingState from '@/components/LoadingState';
 
 const DeliveryRoutes: React.FC = () => {
   const { user, loading, isDeliveryPartner, isDeliveryPartnerEmail, refreshUserRole } = useAuth();
@@ -23,7 +24,7 @@ const DeliveryRoutes: React.FC = () => {
   }, [user, refreshUserRole]);
   
   if (loading || checking) {
-    return <div className="flex items-center justify-center h-screen">Verifying delivery partner access...</div>;
+    return <LoadingState message="Verifying delivery partner access..." />;
   }
   
   if (!user) {

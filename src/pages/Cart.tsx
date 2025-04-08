@@ -8,12 +8,13 @@ import { useNavigate } from 'react-router-dom';
 import { toast } from "sonner";
 import { useAuth } from '@/context/AuthContext';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Progress } from '@/components/ui/progress';
 
 const Cart: React.FC = () => {
   const { cart, removeFromCart, updateQuantity, getTotalPrice, placeOrder, loading, fetchCart } = useCart();
   const { user } = useAuth();
   const navigate = useNavigate();
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [retryCount, setRetryCount] = useState(0);
   const [cartLoaded, setCartLoaded] = useState(false);
 
@@ -80,6 +81,9 @@ const Cart: React.FC = () => {
     return (
       <div className="container mx-auto px-4 py-12 flex flex-col mb-16 md:mb-0">
         <h1 className="text-3xl font-bold mb-8">Your Cart</h1>
+        <div className="w-full mb-6">
+          <Progress value={65} className="h-1 w-full bg-gray-200" />
+        </div>
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2">
             {[1, 2].map((i) => (
