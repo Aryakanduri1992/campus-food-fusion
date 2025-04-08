@@ -129,41 +129,31 @@ const UserRoleManager: React.FC<UserRoleManagerProps> = ({ onRoleAssigned }) => 
 
       console.log("Role assigned successfully");
       
-      // Instead of trying to get user by email directly (which is not supported),
-      // we'll query the database for the user ID associated with the role we just assigned
-      const { data: userData, error: userError } = await supabase
+      // Query to find the user ID from the user_roles table
+      const { data: userRoleData, error: userRoleError } = await supabase
         .from('user_roles')
-        .select('user_id')
+        .select('id, user_id')
         .eq('role', 'delivery_partner')
-        .eq('email', email)
-        .maybeSingle();
+        .order('created_at', { ascending: false })
+        .limit(1);
 
       let userId = null;
+      let roleId = null;
       
-      if (userError) {
-        console.error("Error fetching user ID:", userError);
-      } else if (userData) {
-        userId = userData.user_id;
+      if (userRoleError) {
+        console.error("Error fetching user role:", userRoleError);
+      } else if (userRoleData && userRoleData.length > 0) {
+        userId = userRoleData[0].user_id;
+        roleId = userRoleData[0].id;
+        console.log("Found user ID:", userId, "and role ID:", roleId);
       }
       
-      // Get the role ID for the newly assigned role
-      const { data: newRoleData, error: fetchError } = await supabase
-        .from('user_roles')
-        .select('id')
-        .eq('role', 'delivery_partner')
-        .eq('user_id', userId || '')
-        .single();
-
-      if (fetchError) {
-        console.error("Error fetching role ID:", fetchError);
-      } else if (newRoleData) {
-        console.log("Found role ID:", newRoleData.id);
-        
-        // Store the email in the delivery_partners_emails table
+      // Store the email in the delivery_partners_emails table
+      if (roleId) {
         const { error: insertError } = await supabase
           .from('delivery_partners_emails')
           .insert({
-            role_id: newRoleData.id,
+            role_id: roleId,
             email: email
           });
 
@@ -175,7 +165,7 @@ const UserRoleManager: React.FC<UserRoleManagerProps> = ({ onRoleAssigned }) => 
       }
 
       // Add to local state for immediate UI update
-      const newId = newRoleData?.id || 'temp-' + Date.now();
+      const newId = roleId || 'temp-' + Date.now();
       setDeliveryPartners(prev => [
         ...prev,
         {
