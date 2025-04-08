@@ -28,6 +28,9 @@ export interface Order {
   timestamp: string;
 }
 
+// User role type
+export type UserRole = 'customer' | 'delivery_partner' | 'owner';
+
 // Database types for type safety when working with Supabase
 export interface DbCartItem {
   id: string;
@@ -56,6 +59,14 @@ export interface DbOrderItem {
   food_price: number;
   food_image_url: string;
   quantity: number;
+  created_at: string;
+}
+
+// User roles table type
+export interface DbUserRole {
+  id: string;
+  user_id: string;
+  role: UserRole;
   created_at: string;
 }
 
@@ -122,6 +133,15 @@ export type Database = {
           updated_at: string;
         };
       };
+      user_roles: {
+        Row: {
+          id: string;
+          user_id: string;
+          role: UserRole;
+          created_at: string;
+        };
+      };
     };
   };
 };
+

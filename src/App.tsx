@@ -31,30 +31,28 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   return <>{children}</>;
 };
 
-// Owner route component - only for aryaprasad771@gmail.com
+// Owner route component - only for users with owner role
 const OwnerRoute = ({ children }: { children: React.ReactNode }) => {
-  const { user, loading } = useAuth();
+  const { user, loading, userRole } = useAuth();
   
   if (loading) return <div className="flex items-center justify-center h-screen">Loading...</div>;
   
   if (!user) return <Navigate to="/auth" replace />;
   
-  if (user.email !== 'aryaprasad771@gmail.com') return <Navigate to="/" replace />;
+  if (userRole !== 'owner') return <Navigate to="/" replace />;
   
   return <>{children}</>;
 };
 
-// Delivery partner route - for delivery partner accounts
+// Delivery partner route - for users with delivery_partner role
 const DeliveryPartnerRoute = ({ children }: { children: React.ReactNode }) => {
-  const { user, loading } = useAuth();
+  const { user, loading, userRole } = useAuth();
   
   if (loading) return <div className="flex items-center justify-center h-screen">Loading...</div>;
   
   if (!user) return <Navigate to="/auth" replace />;
   
-  // In a real application, check if the user is a delivery partner
-  // For now, we'll use a simple check to make sure it's not the owner
-  if (user.email === 'aryaprasad771@gmail.com') return <Navigate to="/owner" replace />;
+  if (userRole !== 'delivery_partner') return <Navigate to="/" replace />;
   
   return <>{children}</>;
 };

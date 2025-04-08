@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
@@ -32,6 +31,7 @@ import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Label } from '@/components/ui/label';
 import { Loader2, MapPin, Clock, Truck, CheckCircle } from 'lucide-react';
+import UserRoleManager from '@/components/UserRoleManager';
 
 interface OrderWithItems {
   id: string;
@@ -54,7 +54,7 @@ interface DeliveryPartner {
 }
 
 const Owner = () => {
-  const { user } = useAuth();
+  const { user, userRole } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
@@ -71,7 +71,7 @@ const Owner = () => {
 
   useEffect(() => {
     // Check if the user is the owner
-    if (user && user.email !== 'aryaprasad771@gmail.com') {
+    if (user && userRole !== 'owner') {
       toast({
         title: "Access Denied",
         description: "You don't have permission to access this page",
@@ -82,7 +82,7 @@ const Owner = () => {
     }
 
     fetchOrders();
-  }, [user, navigate]);
+  }, [user, userRole, navigate]);
 
   const fetchOrders = async () => {
     try {
@@ -246,6 +246,13 @@ const Owner = () => {
     });
   };
 
+  const handleRoleAssigned = () => {
+    toast({
+      title: "Role Updated",
+      description: "Delivery partner role has been assigned. User can now log in as a delivery partner.",
+    });
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-screen">
@@ -260,10 +267,11 @@ const Owner = () => {
       <h1 className="text-3xl font-bold mb-8 text-rv-navy">Owner Dashboard</h1>
       
       <Tabs defaultValue="orders" className="space-y-8">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="orders">Orders</TabsTrigger>
           <TabsTrigger value="delivery">Manage Delivery</TabsTrigger>
           <TabsTrigger value="partners">Delivery Partners</TabsTrigger>
+          <TabsTrigger value="roles">User Roles</TabsTrigger>
         </TabsList>
         
         <TabsContent value="orders">
@@ -530,6 +538,10 @@ const Owner = () => {
               </CardContent>
             </Card>
           </div>
+        </TabsContent>
+        
+        <TabsContent value="roles">
+          <UserRoleManager onRoleAssigned={handleRoleAssigned} />
         </TabsContent>
       </Tabs>
     </div>

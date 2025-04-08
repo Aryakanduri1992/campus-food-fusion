@@ -10,17 +10,15 @@ import { useToast } from '@/hooks/use-toast';
 const Navigation: React.FC = () => {
   const location = useLocation();
   const { getTotalItems } = useCart();
-  const { user, signOut } = useAuth();
+  const { user, userRole, signOut } = useAuth();
   const { toast } = useToast();
   
   const isActive = (path: string) => {
     return location.pathname === path;
   };
 
-  const isOwner = user?.email === 'aryaprasad771@gmail.com';
-  // In a real app, you would check if the user is a delivery partner
-  // For now, we'll consider any logged-in user who is not the owner as a potential delivery partner
-  const isDeliveryPartner = user && !isOwner;
+  const isOwner = userRole === 'owner';
+  const isDeliveryPartner = userRole === 'delivery_partner';
 
   const handleSignOut = async () => {
     try {
@@ -57,21 +55,27 @@ const Navigation: React.FC = () => {
               <ClipboardList size={20} />
               <span>Menu</span>
             </Link>
-            <Link to="/cart" className={`flex items-center space-x-2 ${isActive('/cart') ? 'text-rv-gold' : 'hover:text-rv-gold'}`}>
-              <div className="relative">
-                <ShoppingCart size={20} />
-                {getTotalItems() > 0 && (
-                  <span className="absolute -top-2 -right-2 bg-rv-burgundy text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-                    {getTotalItems()}
-                  </span>
-                )}
-              </div>
-              <span>Cart</span>
-            </Link>
-            <Link to="/orders" className={`flex items-center space-x-2 ${isActive('/orders') ? 'text-rv-gold' : 'hover:text-rv-gold'}`}>
-              <User size={20} />
-              <span>My Orders</span>
-            </Link>
+            
+            {!isDeliveryPartner && (
+              <Link to="/cart" className={`flex items-center space-x-2 ${isActive('/cart') ? 'text-rv-gold' : 'hover:text-rv-gold'}`}>
+                <div className="relative">
+                  <ShoppingCart size={20} />
+                  {getTotalItems() > 0 && (
+                    <span className="absolute -top-2 -right-2 bg-rv-burgundy text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                      {getTotalItems()}
+                    </span>
+                  )}
+                </div>
+                <span>Cart</span>
+              </Link>
+            )}
+            
+            {user && !isDeliveryPartner && !isOwner && (
+              <Link to="/orders" className={`flex items-center space-x-2 ${isActive('/orders') ? 'text-rv-gold' : 'hover:text-rv-gold'}`}>
+                <User size={20} />
+                <span>My Orders</span>
+              </Link>
+            )}
             
             {isOwner && (
               <Link to="/owner" className={`flex items-center space-x-2 ${isActive('/owner') ? 'text-rv-gold' : 'hover:text-rv-gold'}`}>
@@ -117,17 +121,20 @@ const Navigation: React.FC = () => {
               <ClipboardList size={20} />
               <span className="text-xs">Menu</span>
             </Link>
-            <Link to="/cart" className={`flex flex-col items-center ${isActive('/cart') ? 'text-rv-gold' : ''}`}>
-              <div className="relative">
-                <ShoppingCart size={20} />
-                {getTotalItems() > 0 && (
-                  <span className="absolute -top-2 -right-2 bg-rv-burgundy text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-                    {getTotalItems()}
-                  </span>
-                )}
-              </div>
-              <span className="text-xs">Cart</span>
-            </Link>
+            
+            {!isDeliveryPartner && (
+              <Link to="/cart" className={`flex flex-col items-center ${isActive('/cart') ? 'text-rv-gold' : ''}`}>
+                <div className="relative">
+                  <ShoppingCart size={20} />
+                  {getTotalItems() > 0 && (
+                    <span className="absolute -top-2 -right-2 bg-rv-burgundy text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                      {getTotalItems()}
+                    </span>
+                  )}
+                </div>
+                <span className="text-xs">Cart</span>
+              </Link>
+            )}
             
             {isOwner ? (
               <Link to="/owner" className={`flex flex-col items-center ${isActive('/owner') ? 'text-rv-gold' : ''}`}>
@@ -139,12 +146,12 @@ const Navigation: React.FC = () => {
                 <Truck size={20} />
                 <span className="text-xs">Delivery</span>
               </Link>
-            ) : (
+            ) : user ? (
               <Link to="/orders" className={`flex flex-col items-center ${isActive('/orders') ? 'text-rv-gold' : ''}`}>
                 <User size={20} />
                 <span className="text-xs">Orders</span>
               </Link>
-            )}
+            ) : null}
             
             {user ? (
               <button 
