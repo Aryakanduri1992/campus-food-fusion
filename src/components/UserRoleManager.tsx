@@ -59,10 +59,10 @@ const UserRoleManager: React.FC<UserRoleManagerProps> = ({ onRoleAssigned }) => 
         return;
       }
       
-      // Get emails using a safer approach with type casting
-      // This avoids TypeScript errors when accessing tables not in the type definition
+      // The delivery_partners_emails table is now in the types but we still need to properly 
+      // handle the response typing
       const { data: emailData, error: emailError } = await supabase
-        .from('delivery_partners_emails' as any)
+        .from('delivery_partners_emails')
         .select('*');
       
       if (emailError) {
@@ -76,7 +76,10 @@ const UserRoleManager: React.FC<UserRoleManagerProps> = ({ onRoleAssigned }) => 
       if (roleData) {
         partnersData = roleData.map(role => {
           // Try to find the email from our delivery_partners_emails table
-          const emailEntry = emailData ? emailData.find((e: any) => e.role_id === role.id) : null;
+          // We need to ensure emailData is treated as an array of objects with role_id and email properties
+          const emailEntry = emailData ? 
+            emailData.find((e: { role_id: string, email: string }) => e.role_id === role.id) : 
+            null;
           
           return {
             id: role.id,
@@ -136,13 +139,13 @@ const UserRoleManager: React.FC<UserRoleManagerProps> = ({ onRoleAssigned }) => 
       if (fetchError) {
         console.error("Error fetching role ID:", fetchError);
       } else if (newRoleData) {
-        // Store the email in our custom table using type casting to bypass TypeScript limitations
+        // Now properly handle the type for storing the email in the delivery_partners_emails table
         const { error: insertError } = await supabase
-          .from('delivery_partners_emails' as any)
+          .from('delivery_partners_emails')
           .insert({
             role_id: newRoleData.id,
             email: email
-          } as any);
+          });
 
         if (insertError) {
           console.error("Error storing email:", insertError);
