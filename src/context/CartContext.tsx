@@ -1,3 +1,4 @@
+
 import React, { createContext, useState, useContext, ReactNode, useEffect } from 'react';
 import { CartItem, FoodItem, DbCartItem, DbOrderItem, Database, FoodCategory } from '../types';
 import { toast } from "sonner";
@@ -192,17 +193,25 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setCart([]);
     
     if (user && cartId) {
-      supabase
-        .from('cart_items')
-        .delete()
-        .eq('cart_id', cartId)
-        .then(() => {
-          toast.info('Cart cleared');
-        })
-        .catch(error => {
+      // Fix: Properly handle the Promise
+      (async () => {
+        try {
+          const { error } = await supabase
+            .from('cart_items')
+            .delete()
+            .eq('cart_id', cartId);
+            
+          if (error) {
+            console.error('Error clearing cart:', error);
+            toast.error('Failed to clear cart');
+          } else {
+            toast.info('Cart cleared');
+          }
+        } catch (error) {
           console.error('Error clearing cart:', error);
           toast.error('Failed to clear cart');
-        });
+        }
+      })();
     } else {
       toast.info('Cart cleared');
     }
