@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -51,7 +52,7 @@ const Orders: React.FC = () => {
                 status: order.status as OrderStatus,
                 totalPrice: order.total_price,
                 timestamp: order.created_at,
-                items: (itemsData || []).map((item: DbOrderItem) => ({
+                items: (itemsData || []).map((item: any) => ({
                   quantity: item.quantity,
                   foodItem: {
                     id: item.food_item_id,
