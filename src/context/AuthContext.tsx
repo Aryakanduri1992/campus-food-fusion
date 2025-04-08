@@ -15,6 +15,7 @@ type AuthContextType = {
   refreshUserRole: () => Promise<void>;
   isDeliveryPartner: boolean;
   isOwner: boolean;
+  isDeliveryPartnerEmail: boolean;
 };
 
 const AuthContext = createContext<AuthContextType>({
@@ -27,6 +28,7 @@ const AuthContext = createContext<AuthContextType>({
   refreshUserRole: async () => {},
   isDeliveryPartner: false,
   isOwner: false,
+  isDeliveryPartnerEmail: false,
 });
 
 export const useAuth = () => useContext(AuthContext);
@@ -38,7 +40,31 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
   const [isDeliveryPartner, setIsDeliveryPartner] = useState(false);
   const [isOwner, setIsOwner] = useState(false);
+  const [isDeliveryPartnerEmail, setIsDeliveryPartnerEmail] = useState(false);
   const { toast } = useToast();
+
+  // Check if the current user's email is registered as a delivery partner
+  const checkDeliveryPartnerEmail = async (email: string) => {
+    if (!email) return false;
+    
+    try {
+      const { data, error } = await supabase
+        .from('delivery_partners_emails')
+        .select('email')
+        .eq('email', email)
+        .single();
+      
+      if (error) {
+        console.error('Error checking delivery partner email:', error);
+        return false;
+      }
+      
+      return !!data;
+    } catch (error) {
+      console.error('Unexpected error checking delivery partner email:', error);
+      return false;
+    }
+  };
 
   const checkUserRole = async (): Promise<UserRole | null> => {
     if (!user) return null;
@@ -76,6 +102,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Update convenience flags
       setIsDeliveryPartner(role === 'delivery_partner');
       setIsOwner(role === 'owner');
+      
+      // Also check if email is registered as delivery partner
+      if (user.email) {
+        const isDeliveryEmail = await checkDeliveryPartnerEmail(user.email);
+        setIsDeliveryPartnerEmail(isDeliveryEmail);
+        console.log('Is delivery partner email:', isDeliveryEmail);
+      }
     }
   };
 
@@ -95,10 +128,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           // Update convenience flags
           setIsDeliveryPartner(role === 'delivery_partner');
           setIsOwner(role === 'owner');
+          
+          // Check if email is registered as delivery partner
+          if (session.user.email) {
+            const isDeliveryEmail = await checkDeliveryPartnerEmail(session.user.email);
+            setIsDeliveryPartnerEmail(isDeliveryEmail);
+            console.log('Is delivery partner email:', isDeliveryEmail);
+          }
         } else {
           setUserRole(null);
           setIsDeliveryPartner(false);
           setIsOwner(false);
+          setIsDeliveryPartnerEmail(false);
         }
         
         setLoading(false);
@@ -119,6 +160,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         // Update convenience flags
         setIsDeliveryPartner(role === 'delivery_partner');
         setIsOwner(role === 'owner');
+        
+        // Check if email is registered as delivery partner
+        if (session.user.email) {
+          const isDeliveryEmail = await checkDeliveryPartnerEmail(session.user.email);
+          setIsDeliveryPartnerEmail(isDeliveryEmail);
+          console.log('Is delivery partner email from initial check:', isDeliveryEmail);
+        }
       }
       
       setLoading(false);
@@ -154,7 +202,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       checkUserRole,
       refreshUserRole,
       isDeliveryPartner,
-      isOwner
+      isOwner,
+      isDeliveryPartnerEmail
     }}>
       {children}
     </AuthContext.Provider>

@@ -10,7 +10,7 @@ import { useToast } from '@/hooks/use-toast';
 const Navigation: React.FC = () => {
   const location = useLocation();
   const { getTotalItems } = useCart();
-  const { user, userRole, signOut, checkUserRole, refreshUserRole } = useAuth();
+  const { user, userRole, signOut, refreshUserRole, isOwner, isDeliveryPartner, isDeliveryPartnerEmail } = useAuth();
   const { toast } = useToast();
   
   // Debug userRole and refresh when component mounts
@@ -35,11 +35,12 @@ const Navigation: React.FC = () => {
     return location.pathname === path;
   };
 
-  const isOwner = userRole === 'owner';
-  const isDeliveryPartner = userRole === 'delivery_partner';
-
+  // Check if user is either a delivery partner by role or email
+  const showDeliveryDashboard = isDeliveryPartner || isDeliveryPartnerEmail;
+  
   console.log("Is owner?", isOwner);
   console.log("Is delivery partner?", isDeliveryPartner);
+  console.log("Is delivery partner email?", isDeliveryPartnerEmail);
 
   const handleSignOut = async () => {
     try {
@@ -77,7 +78,7 @@ const Navigation: React.FC = () => {
               <span>Menu</span>
             </Link>
             
-            {!isDeliveryPartner && (
+            {!showDeliveryDashboard && (
               <Link to="/cart" className={`flex items-center space-x-2 ${isActive('/cart') ? 'text-rv-gold' : 'hover:text-rv-gold'}`}>
                 <div className="relative">
                   <ShoppingCart size={20} />
@@ -91,7 +92,7 @@ const Navigation: React.FC = () => {
               </Link>
             )}
             
-            {user && !isDeliveryPartner && !isOwner && (
+            {user && !showDeliveryDashboard && !isOwner && (
               <Link to="/orders" className={`flex items-center space-x-2 ${isActive('/orders') ? 'text-rv-gold' : 'hover:text-rv-gold'}`}>
                 <User size={20} />
                 <span>My Orders</span>
@@ -105,7 +106,7 @@ const Navigation: React.FC = () => {
               </Link>
             )}
             
-            {isDeliveryPartner && (
+            {showDeliveryDashboard && (
               <Link to="/delivery" className={`flex items-center space-x-2 ${isActive('/delivery') ? 'text-rv-gold' : 'hover:text-rv-gold'}`}>
                 <Truck size={20} />
                 <span>Delivery Dashboard</span>
@@ -143,7 +144,7 @@ const Navigation: React.FC = () => {
               <span className="text-xs">Menu</span>
             </Link>
             
-            {!isDeliveryPartner && (
+            {!showDeliveryDashboard && (
               <Link to="/cart" className={`flex flex-col items-center ${isActive('/cart') ? 'text-rv-gold' : ''}`}>
                 <div className="relative">
                   <ShoppingCart size={20} />
@@ -162,7 +163,7 @@ const Navigation: React.FC = () => {
                 <Settings size={20} />
                 <span className="text-xs">Owner</span>
               </Link>
-            ) : isDeliveryPartner ? (
+            ) : showDeliveryDashboard ? (
               <Link to="/delivery" className={`flex flex-col items-center ${isActive('/delivery') ? 'text-rv-gold' : ''}`}>
                 <Truck size={20} />
                 <span className="text-xs">Delivery</span>
