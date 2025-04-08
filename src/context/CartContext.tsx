@@ -1,4 +1,3 @@
-
 import React, { createContext, useState, useContext, ReactNode, useEffect } from 'react';
 import { CartItem, FoodItem, DbCartItem, DbOrderItem, Database, FoodCategory } from '../types';
 import { toast } from "sonner";
@@ -283,7 +282,7 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         order_id: newOrder.id,
         food_item_id: item.foodItem.id,
         food_name: item.foodItem.name,
-        food_price: item.food_price,
+        food_price: item.foodItem.price,
         food_image_url: item.foodItem.imageUrl,
         quantity: item.quantity
       }));
