@@ -1,3 +1,4 @@
+
 import React, { createContext, useState, useContext, ReactNode, useEffect } from 'react';
 import { CartItem, FoodItem, DbCartItem, DbOrderItem, Database, FoodCategory } from '../types';
 import { toast } from "sonner";
@@ -30,12 +31,16 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   
   // Function to fetch cart data
   const fetchCart = async () => {
+    console.log('Fetching cart, user:', user?.id);
+    
     if (!user) {
       // If user is not logged in, try to get cart from local storage
       try {
         const savedCart = localStorage.getItem(CART_STORAGE_KEY);
         if (savedCart) {
-          setCart(JSON.parse(savedCart));
+          const parsedCart = JSON.parse(savedCart);
+          console.log('Loaded cart from local storage:', parsedCart);
+          setCart(parsedCart);
         }
       } catch (error) {
         console.error('Error loading cart from local storage:', error);
@@ -54,6 +59,8 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         .limit(1);
         
       if (cartsError) throw cartsError;
+      
+      console.log('Existing carts:', existingCarts);
         
       let currentCartId;
       
@@ -67,6 +74,8 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           .eq('cart_id', currentCartId);
           
         if (itemsError) throw itemsError;
+        
+        console.log('Cart items from DB:', cartItems);
           
         if (cartItems && cartItems.length > 0) {
           const formattedItems: CartItem[] = cartItems.map((item: DbCartItem) => ({
@@ -81,11 +90,18 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             quantity: item.quantity
           }));
           
+          console.log('Formatted cart items:', formattedItems);
           setCart(formattedItems);
           // Also save to local storage
           localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(formattedItems));
+        } else {
+          // Cart exists but is empty
+          console.log('Cart exists but is empty');
+          setCart([]);
+          localStorage.setItem(CART_STORAGE_KEY, JSON.stringify([]));
         }
       } else if (user) {
+        console.log('Creating new cart for user:', user.id);
         const { data: newCart, error: newCartError } = await supabase
           .from('carts')
           .insert({ user_id: user.id })
@@ -97,6 +113,21 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         if (newCart) {
           setCartId(newCart.id);
           currentCartId = newCart.id;
+          
+          // Try to get cart from local storage and save to DB
+          try {
+            const savedCart = localStorage.getItem(CART_STORAGE_KEY);
+            if (savedCart) {
+              const parsedCart: CartItem[] = JSON.parse(savedCart);
+              if (parsedCart.length > 0) {
+                console.log('Syncing local cart to new DB cart');
+                setCart(parsedCart);
+                await syncCartToDatabase(parsedCart, newCart.id);
+              }
+            }
+          } catch (error) {
+            console.error('Error syncing local cart to DB:', error);
+          }
         }
       }
     } catch (error) {
@@ -111,34 +142,41 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     fetchCart();
   }, [user]);
   
-  const syncCartToDatabase = async (updatedCart: CartItem[]) => {
+  const syncCartToDatabase = async (updatedCart: CartItem[], targetCartId: string | null = cartId) => {
     // Always save to local storage first for faster access
     try {
       localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(updatedCart));
+      console.log('Saved cart to local storage:', updatedCart);
     } catch (error) {
       console.error('Error saving to local storage:', error);
     }
     
-    if (!user || !cartId) return;
+    if (!user || !targetCartId) {
+      console.log('Not syncing to DB - no user or cartId');
+      return;
+    }
     
     setLoading(true);
     try {
+      console.log('Syncing cart to database. CartId:', targetCartId);
       const { error: deleteError } = await supabase
         .from('cart_items')
         .delete()
-        .eq('cart_id', cartId);
+        .eq('cart_id', targetCartId);
         
       if (deleteError) throw deleteError;
         
       if (updatedCart.length > 0) {
         const cartItemsToInsert = updatedCart.map(item => ({
-          cart_id: cartId,
+          cart_id: targetCartId,
           food_item_id: item.foodItem.id,
           food_name: item.foodItem.name,
           food_price: item.foodItem.price,
           food_image_url: item.foodItem.imageUrl,
           quantity: item.quantity
         }));
+        
+        console.log('Inserting items to DB:', cartItemsToInsert);
         
         const { error: insertError } = await supabase
           .from('cart_items')
@@ -170,6 +208,8 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         toast.success(`Added ${foodItem.name} to cart`);
       }
       
+      console.log('Updated cart after add:', updatedCart);
+      
       syncCartToDatabase(updatedCart);
       
       return updatedCart;
@@ -184,6 +224,8 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       }
       
       const updatedCart = prevCart.filter(item => item.foodItem.id !== foodItemId);
+      
+      console.log('Updated cart after remove:', updatedCart);
       
       syncCartToDatabase(updatedCart);
       
@@ -203,6 +245,8 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           ? { ...item, quantity: newQuantity } 
           : item
       );
+      
+      console.log('Updated cart after quantity change:', updatedCart);
       
       syncCartToDatabase(updatedCart);
       

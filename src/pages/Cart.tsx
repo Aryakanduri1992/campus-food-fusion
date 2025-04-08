@@ -24,12 +24,21 @@ const Cart: React.FC = () => {
         console.error('Error fetching cart:', error);
         toast.error('Failed to load your cart items');
       } finally {
+        // Make sure to set loading to false even if there's an error
         setIsLoading(false);
       }
     };
     
     loadCart();
+    
+    // Log cart state for debugging
+    console.log('Cart component mounted, current cart:', cart);
   }, [fetchCart]);
+
+  // Add a second useEffect to log cart changes
+  useEffect(() => {
+    console.log('Cart updated:', cart);
+  }, [cart]);
 
   const handlePlaceOrder = async () => {
     if (!user) {
@@ -50,7 +59,7 @@ const Cart: React.FC = () => {
     }
   };
 
-  // Show loading state while cart is being fetched
+  // Only show loading state if isLoading is true
   if (isLoading) {
     return (
       <div className="container mx-auto px-4 py-12 flex flex-col items-center justify-center mb-16 md:mb-0">
@@ -61,7 +70,8 @@ const Cart: React.FC = () => {
     );
   }
 
-  if (cart.length === 0) {
+  // Only show empty cart if cart is empty AND we're not loading
+  if (!isLoading && cart.length === 0) {
     return (
       <div className="container mx-auto px-4 py-12 flex flex-col items-center mb-16 md:mb-0">
         <ShoppingBag size={64} className="text-gray-300 mb-4" />
@@ -162,7 +172,7 @@ const Cart: React.FC = () => {
                 className="w-full mt-6 bg-rv-navy hover:bg-rv-burgundy"
                 size="lg"
                 onClick={handlePlaceOrder}
-                disabled={loading}
+                disabled={loading || cart.length === 0}
               >
                 {loading ? (
                   <>
