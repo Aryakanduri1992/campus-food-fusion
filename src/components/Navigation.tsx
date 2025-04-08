@@ -15,35 +15,18 @@ const Navigation: React.FC = () => {
   
   // Debug userRole and refresh when component mounts
   useEffect(() => {
-    console.log("Navigation - Current user role:", userRole);
-    console.log("Navigation - Current user email:", user?.email);
-    console.log("Navigation - isOwner flag:", isOwner);
-    
     // Force refresh the user role when Navigation mounts
     if (user) {
-      refreshUserRole().then(() => {
-        console.log("Navigation - Updated role after refresh:", userRole);
-        console.log("Navigation - Updated isOwner after refresh:", isOwner);
-      });
+      refreshUserRole();
     }
-  }, [user, refreshUserRole, userRole, isOwner]);
-  
-  // Add additional effect to respond to userRole changes
-  useEffect(() => {
-    console.log("Navigation - UserRole changed:", userRole);
-    console.log("Navigation - isOwner flag updated:", isOwner);
-  }, [userRole, isOwner]);
+  }, [user, refreshUserRole]);
   
   const isActive = (path: string) => {
-    return location.pathname === path;
+    return location.pathname === path || location.pathname.startsWith(path + '/');
   };
 
   // Check if user is either a delivery partner by role or email
   const showDeliveryDashboard = isDeliveryPartner || isDeliveryPartnerEmail;
-  
-  console.log("Navigation render - Is owner?", isOwner);
-  console.log("Navigation render - Is delivery partner?", isDeliveryPartner);
-  console.log("Navigation render - Is delivery partner email?", isDeliveryPartnerEmail);
 
   const handleSignOut = async () => {
     try {
@@ -82,7 +65,7 @@ const Navigation: React.FC = () => {
             </Link>
             
             {!showDeliveryDashboard && !isOwner && (
-              <Link to="/cart" className={`flex items-center space-x-2 ${isActive('/cart') ? 'text-rv-gold' : 'hover:text-rv-gold'}`}>
+              <Link to="/customer/cart" className={`flex items-center space-x-2 ${isActive('/customer/cart') ? 'text-rv-gold' : 'hover:text-rv-gold'}`}>
                 <div className="relative">
                   <ShoppingCart size={20} />
                   {getTotalItems() > 0 && (
@@ -96,7 +79,7 @@ const Navigation: React.FC = () => {
             )}
             
             {user && !showDeliveryDashboard && !isOwner && (
-              <Link to="/orders" className={`flex items-center space-x-2 ${isActive('/orders') ? 'text-rv-gold' : 'hover:text-rv-gold'}`}>
+              <Link to="/customer/orders" className={`flex items-center space-x-2 ${isActive('/customer/orders') ? 'text-rv-gold' : 'hover:text-rv-gold'}`}>
                 <User size={20} />
                 <span>My Orders</span>
               </Link>
@@ -148,7 +131,7 @@ const Navigation: React.FC = () => {
             </Link>
             
             {!showDeliveryDashboard && !isOwner && (
-              <Link to="/cart" className={`flex flex-col items-center ${isActive('/cart') ? 'text-rv-gold' : ''}`}>
+              <Link to="/customer/cart" className={`flex flex-col items-center ${isActive('/customer/cart') ? 'text-rv-gold' : ''}`}>
                 <div className="relative">
                   <ShoppingCart size={20} />
                   {getTotalItems() > 0 && (
@@ -172,7 +155,7 @@ const Navigation: React.FC = () => {
                 <span className="text-xs">Delivery</span>
               </Link>
             ) : user ? (
-              <Link to="/orders" className={`flex flex-col items-center ${isActive('/orders') ? 'text-rv-gold' : ''}`}>
+              <Link to="/customer/orders" className={`flex flex-col items-center ${isActive('/customer/orders') ? 'text-rv-gold' : ''}`}>
                 <User size={20} />
                 <span className="text-xs">Orders</span>
               </Link>
