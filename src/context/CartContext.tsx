@@ -1,3 +1,4 @@
+
 import React, { createContext, useState, useContext, ReactNode, useEffect } from 'react';
 import { CartItem, FoodItem, DbCartItem, DbOrderItem, Database, FoodCategory } from '../types';
 import { toast } from "sonner";
@@ -14,9 +15,13 @@ interface CartContextType {
   getTotalPrice: () => number;
   placeOrder: () => Promise<string | null>;
   loading: boolean;
+  fetchCart: () => Promise<void>; // Add method to force reload cart
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
+
+// Create a local storage key for cart items
+const CART_STORAGE_KEY = 'rv_food_cart_items';
 
 export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -24,79 +29,97 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const { user } = useAuth();
   const [cartId, setCartId] = useState<string | null>(null);
   
-  useEffect(() => {
-    const fetchCart = async () => {
-      if (!user) {
-        setCart([]);
-        setCartId(null);
-        return;
-      }
-      
-      setLoading(true);
+  // Function to fetch cart data
+  const fetchCart = async () => {
+    if (!user) {
+      // If user is not logged in, try to get cart from local storage
       try {
-        const { data: existingCarts, error: cartsError } = await supabase
-          .from('carts')
-          .select('*')
-          .eq('user_id', user.id)
-          .order('created_at', { ascending: false })
-          .limit(1);
-          
-        if (cartsError) throw cartsError;
-          
-        let currentCartId;
-        
-        if (existingCarts && existingCarts.length > 0) {
-          currentCartId = existingCarts[0].id;
-          setCartId(currentCartId);
-          
-          const { data: cartItems, error: itemsError } = await supabase
-            .from('cart_items')
-            .select('*')
-            .eq('cart_id', currentCartId);
-            
-          if (itemsError) throw itemsError;
-            
-          if (cartItems && cartItems.length > 0) {
-            const formattedItems: CartItem[] = cartItems.map((item: DbCartItem) => ({
-              foodItem: {
-                id: item.food_item_id,
-                name: item.food_name,
-                price: item.food_price,
-                imageUrl: item.food_image_url,
-                category: 'Veg' as FoodCategory,
-                description: ''
-              },
-              quantity: item.quantity
-            }));
-            
-            setCart(formattedItems);
-          }
-        } else if (user) {
-          const { data: newCart, error: newCartError } = await supabase
-            .from('carts')
-            .insert({ user_id: user.id })
-            .select()
-            .single();
-            
-          if (newCartError) throw newCartError;
-            
-          if (newCart) {
-            setCartId(newCart.id);
-            currentCartId = newCart.id;
-          }
+        const savedCart = localStorage.getItem(CART_STORAGE_KEY);
+        if (savedCart) {
+          setCart(JSON.parse(savedCart));
         }
       } catch (error) {
-        console.error('Error fetching cart:', error);
-        toast.error('Failed to load your cart');
-      } finally {
-        setLoading(false);
+        console.error('Error loading cart from local storage:', error);
       }
-    };
+      setCartId(null);
+      return;
+    }
     
+    setLoading(true);
+    try {
+      const { data: existingCarts, error: cartsError } = await supabase
+        .from('carts')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(1);
+        
+      if (cartsError) throw cartsError;
+        
+      let currentCartId;
+      
+      if (existingCarts && existingCarts.length > 0) {
+        currentCartId = existingCarts[0].id;
+        setCartId(currentCartId);
+        
+        const { data: cartItems, error: itemsError } = await supabase
+          .from('cart_items')
+          .select('*')
+          .eq('cart_id', currentCartId);
+          
+        if (itemsError) throw itemsError;
+          
+        if (cartItems && cartItems.length > 0) {
+          const formattedItems: CartItem[] = cartItems.map((item: DbCartItem) => ({
+            foodItem: {
+              id: item.food_item_id,
+              name: item.food_name,
+              price: item.food_price,
+              imageUrl: item.food_image_url,
+              category: 'Veg' as FoodCategory,
+              description: ''
+            },
+            quantity: item.quantity
+          }));
+          
+          setCart(formattedItems);
+          // Also save to local storage
+          localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(formattedItems));
+        }
+      } else if (user) {
+        const { data: newCart, error: newCartError } = await supabase
+          .from('carts')
+          .insert({ user_id: user.id })
+          .select()
+          .single();
+          
+        if (newCartError) throw newCartError;
+          
+        if (newCart) {
+          setCartId(newCart.id);
+          currentCartId = newCart.id;
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching cart:', error);
+      toast.error('Failed to load your cart');
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  useEffect(() => {
     fetchCart();
   }, [user]);
   
   const syncCartToDatabase = async (updatedCart: CartItem[]) => {
+    // Always save to local storage first for faster access
+    try {
+      localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(updatedCart));
+    } catch (error) {
+      console.error('Error saving to local storage:', error);
+    }
+    
     if (!user || !cartId) return;
     
     setLoading(true);
@@ -191,6 +214,13 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const clearCart = () => {
     setCart([]);
     
+    // Clear local storage
+    try {
+      localStorage.removeItem(CART_STORAGE_KEY);
+    } catch (error) {
+      console.error('Error clearing local storage:', error);
+    }
+    
     if (user && cartId) {
       (async () => {
         try {
@@ -253,7 +283,7 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         order_id: newOrder.id,
         food_item_id: item.foodItem.id,
         food_name: item.foodItem.name,
-        food_price: item.foodItem.price,
+        food_price: item.food_price,
         food_image_url: item.foodItem.imageUrl,
         quantity: item.quantity
       }));
@@ -273,6 +303,13 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         
       if (clearError) {
         console.error('Error clearing cart:', clearError);
+      }
+      
+      // Clear local storage when order is placed
+      try {
+        localStorage.removeItem(CART_STORAGE_KEY);
+      } catch (error) {
+        console.error('Error clearing local storage:', error);
       }
         
       setCart([]);
@@ -298,7 +335,8 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       getTotalItems,
       getTotalPrice,
       placeOrder,
-      loading
+      loading,
+      fetchCart
     }}>
       {children}
     </CartContext.Provider>

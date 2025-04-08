@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useCart } from '@/context/CartContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -9,9 +9,14 @@ import { toast } from "sonner";
 import { useAuth } from '@/context/AuthContext';
 
 const Cart: React.FC = () => {
-  const { cart, removeFromCart, updateQuantity, clearCart, getTotalPrice, placeOrder, loading } = useCart();
+  const { cart, removeFromCart, updateQuantity, clearCart, getTotalPrice, placeOrder, loading, fetchCart } = useCart();
   const { user } = useAuth();
   const navigate = useNavigate();
+
+  // Fetch cart data when component mounts
+  useEffect(() => {
+    fetchCart();
+  }, []);
 
   const handlePlaceOrder = async () => {
     if (!user) {

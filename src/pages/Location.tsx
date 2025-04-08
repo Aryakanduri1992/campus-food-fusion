@@ -10,7 +10,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { toast } from 'sonner';
 import { MapPin, Navigation } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
-import { useCart } from '@/context/CartContext'; // Import cart context
+import { useCart } from '@/context/CartContext'; 
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -29,13 +29,13 @@ const Location: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user } = useAuth();
-  const { cart, getTotalPrice } = useCart(); // Get cart from context
+  const { cart, getTotalPrice, fetchCart } = useCart();
   const [loading, setLoading] = useState(false);
   const [usingCurrentLocation, setUsingCurrentLocation] = useState(false);
   const [currentCoordinates, setCurrentCoordinates] = useState<{lat: number, lng: number} | null>(null);
   
   const orderId = location.state?.orderId;
-  const totalAmount = location.state?.totalAmount || getTotalPrice(); // Fallback to cart total
+  const totalAmount = location.state?.totalAmount || getTotalPrice();
   
   const form = useForm<LocationFormValues>({
     resolver: zodResolver(locationSchema),
@@ -47,6 +47,11 @@ const Location: React.FC = () => {
       instructions: '',
     }
   });
+
+  useEffect(() => {
+    // Fetch latest cart data when component mounts
+    fetchCart();
+  }, []);
 
   useEffect(() => {
     // Check if cart is empty
