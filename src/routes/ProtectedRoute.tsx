@@ -1,8 +1,8 @@
 
-import React from 'react';
-import { Navigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
-import { Loader2 } from 'lucide-react';
+import LoadingState from '@/components/LoadingState';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -13,15 +13,30 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   children, 
   redirectTo = '/auth'
 }) => {
-  const { user, loading } = useAuth();
+  const { user, loading, refreshUserRole } = useAuth();
+  const [checking, setChecking] = useState(true);
+  const navigate = useNavigate();
   
-  if (loading) {
-    return (
-      <div className="flex flex-col items-center justify-center h-screen">
-        <Loader2 className="h-8 w-8 animate-spin text-rv-burgundy mb-2" />
-        <p className="text-gray-500">Verifying access...</p>
-      </div>
-    );
+  useEffect(() => {
+    const checkAuth = async () => {
+      if (user) {
+        try {
+          await refreshUserRole();
+        } catch (error) {
+          console.error("Error refreshing user role:", error);
+        } finally {
+          setChecking(false);
+        }
+      } else {
+        setChecking(false);
+      }
+    };
+    
+    checkAuth();
+  }, [user, refreshUserRole]);
+  
+  if (loading || checking) {
+    return <LoadingState message="Verifying access..." />;
   }
   
   if (!user) {

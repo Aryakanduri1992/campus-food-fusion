@@ -146,22 +146,68 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   useEffect(() => {
+    let isMounted = true;
+    console.log('Auth provider initialized');
+    
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         console.log('Auth state changed:', event, session?.user?.email);
+        
+        if (isMounted) {
+          setSession(session);
+          setUser(session?.user ?? null);
+          
+          if (session?.user) {
+            // Check if this is an owner email
+            if (session.user.email && isOwnerEmail(session.user.email)) {
+              console.log('Owner email detected during auth change:', session.user.email);
+              setIsOwner(true);
+            }
+            
+            const role = await checkUserRole();
+            console.log('User role from auth state change:', role);
+            setUserRole(role);
+            
+            // Update convenience flags
+            setIsDeliveryPartner(role === 'delivery_partner');
+            setIsOwner(prev => prev || role === 'owner');
+            
+            // Check if email is registered as delivery partner
+            if (session.user.email) {
+              const isDeliveryEmail = await checkDeliveryPartnerEmail(session.user.email);
+              setIsDeliveryPartnerEmail(isDeliveryEmail);
+              console.log('Is delivery partner email:', isDeliveryEmail);
+            }
+          } else {
+            setUserRole(null);
+            setIsDeliveryPartner(false);
+            setIsOwner(false);
+            setIsDeliveryPartnerEmail(false);
+          }
+          
+          setLoading(false);
+        }
+      }
+    );
+
+    // THEN check for existing session
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      console.log('Existing session check:', session?.user?.email);
+      
+      if (isMounted) {
         setSession(session);
         setUser(session?.user ?? null);
         
         if (session?.user) {
           // Check if this is an owner email
           if (session.user.email && isOwnerEmail(session.user.email)) {
-            console.log('Owner email detected during auth change:', session.user.email);
+            console.log('Owner email detected during session check:', session.user.email);
             setIsOwner(true);
           }
           
           const role = await checkUserRole();
-          console.log('User role from auth state change:', role);
+          console.log('User role from initial check:', role);
           setUserRole(role);
           
           // Update convenience flags
@@ -172,68 +218,31 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           if (session.user.email) {
             const isDeliveryEmail = await checkDeliveryPartnerEmail(session.user.email);
             setIsDeliveryPartnerEmail(isDeliveryEmail);
-            console.log('Is delivery partner email:', isDeliveryEmail);
+            console.log('Is delivery partner email from initial check:', isDeliveryEmail);
           }
-        } else {
-          setUserRole(null);
-          setIsDeliveryPartner(false);
-          setIsOwner(false);
-          setIsDeliveryPartnerEmail(false);
         }
         
         setLoading(false);
       }
-    );
-
-    // THEN check for existing session
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      console.log('Existing session check:', session?.user?.email);
-      setSession(session);
-      setUser(session?.user ?? null);
-      
-      if (session?.user) {
-        // Check if this is an owner email
-        if (session.user.email && isOwnerEmail(session.user.email)) {
-          console.log('Owner email detected during session check:', session.user.email);
-          setIsOwner(true);
-        }
-        
-        const role = await checkUserRole();
-        console.log('User role from initial check:', role);
-        setUserRole(role);
-        
-        // Update convenience flags
-        setIsDeliveryPartner(role === 'delivery_partner');
-        setIsOwner(prev => prev || role === 'owner');
-        
-        // Check if email is registered as delivery partner
-        if (session.user.email) {
-          const isDeliveryEmail = await checkDeliveryPartnerEmail(session.user.email);
-          setIsDeliveryPartnerEmail(isDeliveryEmail);
-          console.log('Is delivery partner email from initial check:', isDeliveryEmail);
-        }
-      }
-      
-      setLoading(false);
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      isMounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const signOut = async () => {
+    setLoading(true);
     try {
       await supabase.auth.signOut();
-      toast({
-        title: "Logged out successfully",
-        description: "You have been logged out of your account",
-      });
+      // No need to manually clear state here as the onAuthStateChange will handle it
+      console.log('User signed out successfully');
     } catch (error) {
       console.error('Error signing out:', error);
-      toast({
-        title: "Error",
-        description: "Failed to log out",
-        variant: "destructive",
-      });
+      throw error;
+    } finally {
+      setLoading(false);
     }
   };
 

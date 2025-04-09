@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -27,7 +26,8 @@ const Auth = () => {
 
   useEffect(() => {
     if (user) {
-      navigate('/');
+      console.log('User already authenticated, redirecting to home');
+      navigate('/', { replace: true });
     }
   }, [user, navigate]);
 
@@ -65,6 +65,12 @@ const Auth = () => {
         title: "Account created",
         description: "Please check your email for confirmation",
       });
+      
+      if (data.user && !data.user.identities?.[0].identity_data?.email_verified) {
+        setEmailNotConfirmed(true);
+      } else {
+        navigate('/', { replace: true });
+      }
       
     } catch (error: any) {
       toast({
@@ -110,6 +116,9 @@ const Auth = () => {
         title: "Success",
         description: "You have been logged in successfully",
       });
+      
+      navigate('/', { replace: true });
+      
     } catch (error: any) {
       toast({
         title: "Error",

@@ -1,6 +1,6 @@
 
 import React, { useEffect } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Home, ShoppingCart, ClipboardList, User, LogOut, LogIn, Settings, Truck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useCart } from '@/context/CartContext';
@@ -9,6 +9,7 @@ import { useToast } from '@/hooks/use-toast';
 
 const Navigation: React.FC = () => {
   const location = useLocation();
+  const navigate = useNavigate();
   const { getTotalItems } = useCart();
   const { user, userRole, signOut, refreshUserRole, isOwner, isDeliveryPartner, isDeliveryPartnerEmail } = useAuth();
   const { toast } = useToast();
@@ -31,6 +32,7 @@ const Navigation: React.FC = () => {
   const handleSignOut = async () => {
     try {
       await signOut();
+      navigate('/', { replace: true });
       toast({
         title: "Logged out successfully",
         description: "You have been logged out of your account",
