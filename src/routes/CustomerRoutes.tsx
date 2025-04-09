@@ -5,41 +5,24 @@ import { useAuth } from '@/context/AuthContext';
 import LoadingState from '@/components/LoadingState';
 
 const CustomerRoutes: React.FC = () => {
-  const { user, loading, isOwner, isDeliveryPartner, refreshUserRole } = useAuth();
-  const [checking, setChecking] = useState(true);
+  const { user, loading, isOwner, isDeliveryPartner } = useAuth();
+  const [checking, setChecking] = useState(false);
   
-  useEffect(() => {
-    const verifyAccess = async () => {
-      if (user) {
-        // Make sure we have the latest user role
-        await refreshUserRole();
-        setChecking(false);
-      } else {
-        setChecking(false);
-      }
-    };
-    
-    verifyAccess();
-  }, [user, refreshUserRole]);
-  
-  if (loading || checking) {
-    return <LoadingState message="Verifying customer access..." />;
-  }
-  
-  if (!user) {
-    return <Navigate to="/auth" replace />;
+  // Handle role-based redirects
+  if (loading) {
+    return <LoadingState message="Loading..." />;
   }
   
   // Redirect owners and delivery partners to their respective dashboards
-  if (isOwner) {
+  if (user && isOwner) {
     return <Navigate to="/owner" replace />;
   }
   
-  if (isDeliveryPartner) {
+  if (user && isDeliveryPartner) {
     return <Navigate to="/delivery" replace />;
   }
   
-  // Regular customer can access customer routes
+  // Non-authenticated users can access cart (we'll check for auth only during checkout)
   return <Outlet />;
 };
 
