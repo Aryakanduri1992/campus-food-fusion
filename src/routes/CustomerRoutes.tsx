@@ -1,13 +1,28 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Navigate, Outlet } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import LoadingState from '@/components/LoadingState';
 
 const CustomerRoutes: React.FC = () => {
-  const { user, loading, isOwner, isDeliveryPartner } = useAuth();
+  const { user, loading, isOwner, isDeliveryPartner, refreshUserRole } = useAuth();
+  const [checking, setChecking] = useState(true);
   
-  if (loading) {
+  useEffect(() => {
+    const verifyAccess = async () => {
+      if (user) {
+        // Make sure we have the latest user role
+        await refreshUserRole();
+        setChecking(false);
+      } else {
+        setChecking(false);
+      }
+    };
+    
+    verifyAccess();
+  }, [user, refreshUserRole]);
+  
+  if (loading || checking) {
     return <LoadingState message="Verifying customer access..." />;
   }
   

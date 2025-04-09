@@ -13,15 +13,25 @@ const DeliveryRoutes: React.FC = () => {
   useEffect(() => {
     const checkDeliveryRole = async () => {
       if (user) {
-        await refreshUserRole();
-        setChecking(false);
+        try {
+          await refreshUserRole();
+        } catch (error) {
+          console.error("Error refreshing user role:", error);
+          toast({
+            title: "Error",
+            description: "Failed to verify your delivery partner status",
+            variant: "destructive"
+          });
+        } finally {
+          setChecking(false);
+        }
       } else {
         setChecking(false);
       }
     };
     
     checkDeliveryRole();
-  }, [user, refreshUserRole]);
+  }, [user, refreshUserRole, toast]);
   
   if (loading || checking) {
     return <LoadingState message="Verifying delivery partner access..." />;
