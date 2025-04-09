@@ -9,8 +9,13 @@ const AutoRedirect = () => {
   const { user, isOwner, isDeliveryPartner, refreshUserRole } = useAuth();
   
   useEffect(() => {
+    // Skip any redirection if already on specific protected paths or not logged in
+    if (!user || location.pathname.includes('/auth')) {
+      return;
+    }
+    
     const handleRedirection = async () => {
-      if (user) {
+      try {
         // Refresh the user role to ensure we have the latest data
         await refreshUserRole();
         
@@ -25,11 +30,15 @@ const AutoRedirect = () => {
         } else if (isDeliveryPartner && !location.pathname.startsWith('/delivery')) {
           navigate('/delivery');
         } else if (!isOwner && !isDeliveryPartner && location.pathname === '/') {
-          // Only redirect customers from root to orders if they're on the root path
-          // and aren't being redirected elsewhere
-          console.log('Auto-redirecting customer to orders');
-          navigate('/customer/orders');
+          // This was causing issues - only redirect customers from root to orders
+          // if they're explicitly viewing the root and aren't being redirected elsewhere
+          if (location.pathname === '/') {
+            console.log('Auto-redirecting customer to orders');
+            navigate('/customer/orders');
+          }
         }
+      } catch (error) {
+        console.error('Error in auto redirect:', error);
       }
     };
     

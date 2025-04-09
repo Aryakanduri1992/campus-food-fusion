@@ -7,12 +7,15 @@ const CustomerRoutes: React.FC = () => {
   const { user, isOwner, isDeliveryPartner } = useAuth();
   
   // Redirect owners and delivery partners to their respective dashboards
-  if (user && isOwner) {
-    return <Navigate to="/owner" replace />;
-  }
-  
-  if (user && isDeliveryPartner) {
-    return <Navigate to="/delivery" replace />;
+  // Only when they are explicitly trying to access customer routes
+  if (user) {
+    if (isOwner) {
+      return <Navigate to="/owner" replace />;
+    }
+    
+    if (isDeliveryPartner) {
+      return <Navigate to="/delivery" replace />;
+    }
   }
   
   // Non-authenticated users can access cart (we'll check for auth only during checkout)
