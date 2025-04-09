@@ -2,7 +2,7 @@
 import React, { createContext, useContext, useEffect, ReactNode } from 'react';
 import { CartContextType } from './cart/types';
 import { useAuth } from '@/context/AuthContext';
-import { useCartOperations } from './cart/useCartOperations';
+import { useCartOperations } from './cart/hooks/useCartOperations';
 import { calculateTotalItems, calculateTotalPrice } from './cart/utils';
 
 const CartContext = createContext<CartContextType | undefined>(undefined);

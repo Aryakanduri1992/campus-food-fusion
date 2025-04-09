@@ -5,21 +5,19 @@ export {
   loadCartFromLocalStorage,
   clearCartFromLocalStorage,
   CART_STORAGE_KEY
-} from './cartStorageService';
+} from './services/cartStorageService';
 
 export {
-  formatDbCartItems,
   cartItemsToDbFormat,
-  calculateTotalPrice,
-  calculateTotalItems
-} from './cartCalculations';
+  formatDbCartItems
+} from './services/cartDatabaseService';
 
-export {
-  deleteCartItems,
-  insertCartItems,
-  createNewCart,
-  fetchCartItems,
-  fetchUserCarts,
-  createOrder,
-  createOrderItems
-} from './cartDatabaseService';
+// Calculate total price of cart
+export const calculateTotalPrice = (cart: any[]): number => {
+  return cart.reduce((total, item) => total + (item.foodItem.price * item.quantity), 0);
+};
+
+// Calculate total items in cart
+export const calculateTotalItems = (cart: any[]): number => {
+  return cart.reduce((total, item) => total + item.quantity, 0);
+};
