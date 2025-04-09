@@ -7,30 +7,42 @@ import { formatDbCartItems, cartItemsToDbFormat } from './utils';
  * Creates a new cart for a user
  */
 export async function createNewCart(userId: string) {
-  const { data: newCart, error } = await supabase
-    .from('carts')
-    .insert({ user_id: userId })
-    .select()
-    .single();
-    
-  if (error) {
-    throw error;
+  try {
+    const { data: newCart, error } = await supabase
+      .from('carts')
+      .insert({ user_id: userId })
+      .select()
+      .single();
+      
+    if (error) {
+      console.error('Error creating new cart:', error);
+      throw error;
+    }
+      
+    return newCart;
+  } catch (error) {
+    console.error('Failed to create new cart:', error);
+    throw new Error('Failed to create new cart');
   }
-    
-  return newCart;
 }
 
 /**
  * Deletes all items in a cart
  */
 export async function deleteCartItems(cartId: string) {
-  const { error } = await supabase
-    .from('cart_items')
-    .delete()
-    .eq('cart_id', cartId);
-    
-  if (error) {
-    throw error;
+  try {
+    const { error } = await supabase
+      .from('cart_items')
+      .delete()
+      .eq('cart_id', cartId);
+      
+    if (error) {
+      console.error('Error deleting cart items:', error);
+      throw error;
+    }
+  } catch (error) {
+    console.error('Failed to delete cart items:', error);
+    throw new Error('Failed to delete cart items');
   }
 }
 
@@ -40,12 +52,18 @@ export async function deleteCartItems(cartId: string) {
 export async function insertCartItems(cartItems: any[]) {
   if (cartItems.length === 0) return;
   
-  const { error } = await supabase
-    .from('cart_items')
-    .insert(cartItems);
-    
-  if (error) {
-    throw error;
+  try {
+    const { error } = await supabase
+      .from('cart_items')
+      .insert(cartItems);
+      
+    if (error) {
+      console.error('Error inserting cart items:', error);
+      throw error;
+    }
+  } catch (error) {
+    console.error('Failed to insert cart items:', error);
+    throw new Error('Failed to insert cart items');
   }
 }
 
@@ -53,80 +71,116 @@ export async function insertCartItems(cartItems: any[]) {
  * Fetches cart items for a cart
  */
 export async function fetchCartItems(cartId: string) {
-  const { data: cartItems, error } = await supabase
-    .from('cart_items')
-    .select('*')
-    .eq('cart_id', cartId);
+  try {
+    const { data: cartItems, error } = await supabase
+      .from('cart_items')
+      .select('*')
+      .eq('cart_id', cartId);
+      
+    if (error) {
+      console.error('Error fetching cart items:', error);
+      throw error;
+    }
     
-  if (error) throw error;
-  
-  if (cartItems && cartItems.length > 0) {
-    return formatDbCartItems(cartItems);
+    if (cartItems && cartItems.length > 0) {
+      return formatDbCartItems(cartItems);
+    }
+    
+    return [];
+  } catch (error) {
+    console.error('Failed to fetch cart items:', error);
+    throw new Error('Failed to fetch cart items');
   }
-  
-  return [];
 }
 
 /**
  * Fetches existing carts for a user
  */
 export async function fetchUserCarts(userId: string) {
-  const { data: existingCarts, error } = await supabase
-    .from('carts')
-    .select('*')
-    .eq('user_id', userId)
-    .order('created_at', { ascending: false })
-    .limit(1);
+  try {
+    const { data: existingCarts, error } = await supabase
+      .from('carts')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+      .limit(1);
+      
+    if (error) {
+      console.error('Error fetching user carts:', error);
+      throw error;
+    }
     
-  if (error) throw error;
-  
-  return existingCarts;
+    return existingCarts;
+  } catch (error) {
+    console.error('Failed to fetch user carts:', error);
+    throw new Error('Failed to fetch user carts');
+  }
 }
 
 /**
  * Creates a new order
  */
 export async function createOrder(userId: string, totalPrice: number) {
-  const { data: newOrder, error } = await supabase
-    .from('orders')
-    .insert({
-      user_id: userId,
-      total_price: totalPrice
-    })
-    .select()
-    .single();
+  try {
+    const { data: newOrder, error } = await supabase
+      .from('orders')
+      .insert({
+        user_id: userId,
+        total_price: totalPrice,
+        status: 'Placed'
+      })
+      .select()
+      .single();
+      
+    if (error) {
+      console.error('Order creation error:', error);
+      if (error.code === '42501') {
+        throw new Error('Permission denied. Please check your account permissions.');
+      }
+      throw new Error('Failed to create order: ' + error.message);
+    }
     
-  if (error) {
-    console.error('Order creation error:', error);
+    if (!newOrder) {
+      throw new Error('No order was created');
+    }
+    
+    return newOrder;
+  } catch (error) {
+    console.error('Failed to create order:', error);
+    if (error instanceof Error) {
+      throw error;
+    }
     throw new Error('Failed to create order');
   }
-  
-  if (!newOrder) {
-    throw new Error('No order was created');
-  }
-  
-  return newOrder;
 }
 
 /**
  * Creates order items for an order
  */
 export async function createOrderItems(orderId: number, cartItems: CartItem[]) {
-  const orderItems = cartItems.map(item => ({
-    order_id: orderId,
-    food_item_id: item.foodItem.id,
-    food_name: item.foodItem.name,
-    food_price: item.foodItem.price,
-    food_image_url: item.foodItem.imageUrl,
-    quantity: item.quantity
-  }));
-  
-  const { error } = await supabase
-    .from('order_items')
-    .insert(orderItems);
+  try {
+    const orderItems = cartItems.map(item => ({
+      order_id: orderId,
+      food_item_id: item.foodItem.id,
+      food_name: item.foodItem.name,
+      food_price: item.foodItem.price,
+      food_image_url: item.foodItem.imageUrl,
+      quantity: item.quantity
+    }));
     
-  if (error) {
-    console.error('Order items creation error:', error);
+    const { error } = await supabase
+      .from('order_items')
+      .insert(orderItems);
+      
+    if (error) {
+      console.error('Order items creation error:', error);
+      throw new Error('Failed to add items to order: ' + error.message);
+    }
+  } catch (error) {
+    console.error('Failed to create order items:', error);
+    if (error instanceof Error) {
+      throw error;
+    }
     throw new Error('Failed to add items to order');
   }
 }

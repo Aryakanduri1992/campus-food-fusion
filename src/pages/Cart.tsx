@@ -17,6 +17,7 @@ const Cart: React.FC = () => {
   const [retryCount, setRetryCount] = useState(0);
   const [cartLoaded, setCartLoaded] = useState(false);
   const [placingOrder, setPlacingOrder] = useState(false);
+  const [orderError, setOrderError] = useState<string | null>(null);
 
   // Fetch cart data when component mounts
   useEffect(() => {
@@ -25,6 +26,8 @@ const Cart: React.FC = () => {
       try {
         await fetchCart();
         setCartLoaded(true);
+        // Clear any previous errors
+        setOrderError(null);
       } catch (error) {
         console.error('Error fetching cart:', error);
         if (retryCount < 3) {
@@ -56,6 +59,7 @@ const Cart: React.FC = () => {
     }
     
     setPlacingOrder(true);
+    setOrderError(null);
     
     try {
       // Place the order first to get the order ID
@@ -74,6 +78,7 @@ const Cart: React.FC = () => {
       }
     } catch (error) {
       console.error("Error placing order:", error);
+      setOrderError(error instanceof Error ? error.message : "An error occurred while placing your order. Please try again.");
       toast.error("An error occurred while placing your order. Please try again.");
     } finally {
       setPlacingOrder(false);
@@ -114,6 +119,7 @@ const Cart: React.FC = () => {
             handlePlaceOrder={handlePlaceOrder}
             loading={loading}
             placingOrder={placingOrder}
+            error={orderError}
           />
         </div>
       </div>
