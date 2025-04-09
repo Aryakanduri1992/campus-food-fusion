@@ -9,21 +9,32 @@ const DeliveryRoutes: React.FC = () => {
   const { user, loading, isDeliveryPartner, isDeliveryPartnerEmail, refreshUserRole } = useAuth();
   const { toast } = useToast();
   const [checking, setChecking] = useState(true);
+  const [showAccessDenied, setShowAccessDenied] = useState(false);
   
   useEffect(() => {
     const checkDeliveryRole = async () => {
       if (user) {
         try {
           await refreshUserRole();
+          setChecking(false);
+          
+          // Check access after role refresh
+          if (!isDeliveryPartner && !isDeliveryPartnerEmail) {
+            setShowAccessDenied(true);
+            toast({
+              title: "Access Denied",
+              description: "You don't have permission to access delivery dashboard",
+              variant: "destructive"
+            });
+          }
         } catch (error) {
           console.error("Error refreshing user role:", error);
+          setChecking(false);
           toast({
             title: "Error",
             description: "Failed to verify your delivery partner status",
             variant: "destructive"
           });
-        } finally {
-          setChecking(false);
         }
       } else {
         setChecking(false);
@@ -31,7 +42,7 @@ const DeliveryRoutes: React.FC = () => {
     };
     
     checkDeliveryRole();
-  }, [user, refreshUserRole, toast]);
+  }, [user, refreshUserRole, isDeliveryPartner, isDeliveryPartnerEmail, toast]);
   
   if (loading || checking) {
     return <LoadingState message="Verifying delivery partner access..." />;
@@ -41,12 +52,7 @@ const DeliveryRoutes: React.FC = () => {
     return <Navigate to="/auth" replace />;
   }
   
-  if (!isDeliveryPartner && !isDeliveryPartnerEmail) {
-    toast({
-      title: "Access Denied",
-      description: "You don't have permission to access delivery dashboard",
-      variant: "destructive"
-    });
+  if (showAccessDenied) {
     return <Navigate to="/" replace />;
   }
   
