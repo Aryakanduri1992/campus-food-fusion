@@ -15,9 +15,13 @@ export {
   insertCartItems,
   fetchCartItems,
   fetchUserCarts,
-  createOrder,
   createOrderItems
 } from './services/cartDatabaseService';
+
+// Export the placeOrder function from orderService
+export {
+  placeOrder
+} from './services/orderService';
 
 // Calculate total price of cart
 export const calculateTotalPrice = (cart: any[]): number => {

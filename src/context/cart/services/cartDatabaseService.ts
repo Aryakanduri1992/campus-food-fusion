@@ -117,43 +117,6 @@ export async function fetchUserCarts(userId: string) {
 }
 
 /**
- * Creates a new order
- */
-export async function createOrder(userId: string, totalPrice: number) {
-  try {
-    const { data: newOrder, error } = await supabase
-      .from('orders')
-      .insert({
-        user_id: userId,
-        total_price: totalPrice,
-        status: 'Placed'
-      })
-      .select()
-      .single();
-      
-    if (error) {
-      console.error('Order creation error:', error);
-      if (error.code === '42501') {
-        throw new Error('Permission denied. Please check your account permissions.');
-      }
-      throw new Error('Failed to create order: ' + error.message);
-    }
-    
-    if (!newOrder) {
-      throw new Error('No order was created');
-    }
-    
-    return newOrder;
-  } catch (error) {
-    console.error('Failed to create order:', error);
-    if (error instanceof Error) {
-      throw error;
-    }
-    throw new Error('Failed to create order');
-  }
-}
-
-/**
  * Creates order items for an order
  */
 export async function createOrderItems(orderId: number, cartItems: CartItem[]) {
