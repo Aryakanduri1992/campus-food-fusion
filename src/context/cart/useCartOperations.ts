@@ -1,3 +1,4 @@
+
 import { useState, useCallback } from 'react';
 import { CartItem, CartState } from './types';
 import { toast } from "sonner";
@@ -238,6 +239,7 @@ export function useCartOperations(user: User | null) {
         return total + (item.foodItem.price * item.quantity);
       }, 0);
       
+      // Create the order record first
       const { data: newOrder, error: orderError } = await supabase
         .from('orders')
         .insert({
@@ -247,10 +249,18 @@ export function useCartOperations(user: User | null) {
         .select()
         .single();
         
-      if (orderError || !newOrder) {
-        throw orderError || new Error('Failed to create order');
+      if (orderError) {
+        console.error('Order creation error:', orderError);
+        throw new Error('Failed to create order');
       }
       
+      if (!newOrder) {
+        throw new Error('No order was created');
+      }
+      
+      console.log('Order created successfully:', newOrder);
+      
+      // Now create the order items
       const orderItems = state.cart.map(item => ({
         order_id: newOrder.id,
         food_item_id: item.foodItem.id,
@@ -265,22 +275,23 @@ export function useCartOperations(user: User | null) {
         .insert(orderItems);
         
       if (itemsError) {
-        throw itemsError;
+        console.error('Order items creation error:', itemsError);
+        throw new Error('Failed to add items to order');
       }
       
+      // Clear the cart after successful order creation
       if (state.cartId) {
         await deleteCartItems(state.cartId);
       }
       
       clearCartFromLocalStorage();
-        
       setState(prev => ({ ...prev, cart: [] }));
       
       toast.success('Order placed successfully!');
       return newOrder.id;
     } catch (error) {
       console.error('Error placing order:', error);
-      toast.error('Failed to place order');
+      toast.error(error instanceof Error ? error.message : 'Failed to place order');
       return null;
     } finally {
       setState(prev => ({ ...prev, loading: false }));

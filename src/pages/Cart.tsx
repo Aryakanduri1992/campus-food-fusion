@@ -17,6 +17,7 @@ const Cart: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [retryCount, setRetryCount] = useState(0);
   const [cartLoaded, setCartLoaded] = useState(false);
+  const [placingOrder, setPlacingOrder] = useState(false);
 
   // Fetch cart data when component mounts
   useEffect(() => {
@@ -55,6 +56,8 @@ const Cart: React.FC = () => {
       return;
     }
     
+    setPlacingOrder(true);
+    
     try {
       // Place the order first to get the order ID
       const orderId = await placeOrder();
@@ -68,11 +71,13 @@ const Cart: React.FC = () => {
           } 
         });
       } else {
-        toast.error("Failed to create order. Please try again.");
+        throw new Error("Failed to create order");
       }
     } catch (error) {
       console.error("Error placing order:", error);
-      toast.error("An error occurred while placing your order.");
+      toast.error("An error occurred while placing your order. Please try again.");
+    } finally {
+      setPlacingOrder(false);
     }
   };
 
@@ -240,12 +245,17 @@ const Cart: React.FC = () => {
                 className="w-full mt-6 bg-rv-navy hover:bg-rv-burgundy"
                 size="lg"
                 onClick={handlePlaceOrder}
-                disabled={loading || cart.length === 0}
+                disabled={loading || placingOrder || cart.length === 0}
               >
-                {loading ? (
+                {placingOrder ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Processing...
+                    Processing Order...
+                  </>
+                ) : loading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Loading...
                   </>
                 ) : 'Place Order'}
               </Button>
@@ -254,7 +264,7 @@ const Cart: React.FC = () => {
                 variant="outline" 
                 className="w-full mt-3 border-rv-navy text-rv-navy hover:bg-rv-navy hover:text-white"
                 onClick={() => navigate('/menu')}
-                disabled={loading}
+                disabled={loading || placingOrder}
               >
                 Continue Shopping
               </Button>

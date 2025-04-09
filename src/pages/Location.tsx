@@ -4,7 +4,6 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { toast } from 'sonner';
@@ -35,8 +34,12 @@ const Location: React.FC = () => {
   const [usingCurrentLocation, setUsingCurrentLocation] = useState(false);
   const [currentCoordinates, setCurrentCoordinates] = useState<{lat: number, lng: number} | null>(null);
   
+  // Get data from location state or use cart data
   const orderId = location.state?.orderId;
   const totalAmount = location.state?.totalAmount || getTotalPrice();
+  
+  console.log("Location page - Order ID:", orderId);
+  console.log("Location page - Total Amount:", totalAmount);
   
   const form = useForm<LocationFormValues>({
     resolver: zodResolver(locationSchema),
@@ -61,7 +64,7 @@ const Location: React.FC = () => {
   }, [fetchCart]);
 
   useEffect(() => {
-    // Check if cart is empty after loading is complete
+    // Check if we have an order ID from state, if not and cart is empty, redirect
     if (!cartLoading && cart.length === 0 && !orderId) {
       toast.error('Your cart is empty');
       navigate('/cart');
@@ -112,6 +115,13 @@ const Location: React.FC = () => {
     // Process the form data
     setTimeout(() => {
       setLoading(false);
+      
+      // Always ensure orderId is passed to payment page
+      if (!orderId && !totalAmount) {
+        toast.error("Order information is missing. Please try again.");
+        navigate('/cart');
+        return;
+      }
       
       // Navigate to payment with both order and location data
       navigate('/payment', { 
