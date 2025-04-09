@@ -4,7 +4,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import OrdersTab from './OrdersTab';
 import DeliveryManagementTab from './DeliveryManagementTab';
 import PartnersTab from './PartnersTab';
-import UserRoleManager from '@/components/UserRoleManager';
+import UserRoleManager from '@/components/user-roles/UserRoleManager';
 import LoadingState from './LoadingState';
 import { useOwnerDashboard } from './hooks/useOwnerDashboard';
 
