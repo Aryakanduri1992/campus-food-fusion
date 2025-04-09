@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from "sonner";
@@ -100,7 +99,6 @@ export function usePaymentForm(orderId: string | number | null, locationData: Lo
     }
   };
 
-  // Update progress bar when processing payment
   useEffect(() => {
     if (state.processingPayment) {
       const interval = setInterval(() => {
@@ -118,14 +116,16 @@ export function usePaymentForm(orderId: string | number | null, locationData: Lo
     }
   }, [state.processingPayment]);
 
-  // Handle completion of payment progress
   useEffect(() => {
     if (state.progressValue === 100 && state.processingPayment) {
       const timer = setTimeout(async () => {
         try {
           if (orderId) {
-            // Since the orders table uses integer IDs, we need to ensure orderId is treated as a number
             const orderIdNumber = typeof orderId === 'string' ? parseInt(orderId, 10) : orderId;
+            
+            if (isNaN(Number(orderIdNumber))) {
+              throw new Error('Invalid order ID');
+            }
             
             const { error } = await supabase
               .from('orders')
@@ -136,7 +136,7 @@ export function usePaymentForm(orderId: string | number | null, locationData: Lo
                 delivery_pincode: locationData?.pincode,
                 delivery_instructions: locationData?.instructions
               })
-              .eq('id', orderIdNumber);
+              .eq('id', Number(orderIdNumber));
               
             if (error) {
               throw error;
