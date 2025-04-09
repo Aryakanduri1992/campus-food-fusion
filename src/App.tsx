@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { Suspense, lazy } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -11,12 +11,25 @@ import Navigation from "@/components/Navigation";
 import routes from "@/routes";
 import AutoRedirect from "@/components/AutoRedirect";
 
-const queryClient = new QueryClient();
+// Create a query client with optimized settings
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 60 * 1000, // 1 minute
+      retry: 1,
+      refetchOnWindowFocus: false,
+    },
+  },
+});
 
-// AppRoutes component to handle all routes
+// AppRoutes component to handle all routes with error boundary
 const AppRoutes = () => {
   const routeElements = useRoutes(routes);
-  return routeElements;
+  return (
+    <Suspense fallback={<div className="flex items-center justify-center h-screen">Loading...</div>}>
+      {routeElements}
+    </Suspense>
+  );
 };
 
 // Main App Component

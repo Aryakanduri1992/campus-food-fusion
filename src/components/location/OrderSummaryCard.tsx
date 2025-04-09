@@ -1,13 +1,13 @@
 
-import React from 'react';
-import { Card, CardContent } from '@/components/ui/card';
+import React, { memo } from 'react';
 
 interface OrderSummaryCardProps {
   orderId: string | null;
   totalAmount: number;
 }
 
-const OrderSummaryCard: React.FC<OrderSummaryCardProps> = ({ orderId, totalAmount }) => {
+// Using React.memo to prevent unnecessary re-renders
+const OrderSummaryCard: React.FC<OrderSummaryCardProps> = memo(({ orderId, totalAmount }) => {
   return (
     <div className="mb-4 p-4 bg-gray-50 rounded-md">
       <div className="flex justify-between">
@@ -20,6 +20,9 @@ const OrderSummaryCard: React.FC<OrderSummaryCardProps> = ({ orderId, totalAmoun
       </div>
     </div>
   );
-};
+});
+
+// Adding displayName for better debugging
+OrderSummaryCard.displayName = 'OrderSummaryCard';
 
 export default OrderSummaryCard;
