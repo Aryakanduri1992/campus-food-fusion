@@ -1,4 +1,3 @@
-
 import { useState, useCallback } from 'react';
 import { CartItem, CartState } from './types';
 import { toast } from "sonner";
@@ -17,9 +16,9 @@ import {
   fetchCartItems,
   cartItemsToDbFormat,
   formatDbCartItems,
-  createOrder,
   createOrderItems
 } from './services/cartDatabaseService';
+import { placeOrder } from './services/orderService';
 
 export function useCartOperations(user: User | null) {
   const [state, setState] = useState<CartState>({
@@ -216,7 +215,7 @@ export function useCartOperations(user: User | null) {
     }
   }, [user, state.cartId]);
 
-  const placeOrder = useCallback(async (): Promise<number | null> => {
+  const placeOrderCallback = useCallback(async (): Promise<number | null> => {
     if (!user) {
       toast.error('Please log in to place an order');
       return null;
@@ -229,34 +228,17 @@ export function useCartOperations(user: User | null) {
     
     setState(prev => ({ ...prev, loading: true }));
     try {
-      const totalPrice = state.cart.reduce((total, item) => {
-        return total + (item.foodItem.price * item.quantity);
-      }, 0);
-      
-      // Create the order record first
-      const newOrder = await createOrder(user.id, totalPrice);
-      
-      console.log('Order created successfully:', newOrder);
-      
-      // Now create the order items
-      await createOrderItems(newOrder.id, state.cart);
-      
-      // Clear the cart after successful order creation
-      if (state.cartId) {
-        await deleteCartItems(state.cartId);
-      }
-      
+      const orderId = await placeOrder(user.id, state.cart, state.cartId);
       clearCartFromLocalStorage();
-      setState(prev => ({ ...prev, cart: [] }));
+      setState(prev => ({ ...prev, cart: [], loading: false }));
       
       toast.success('Order placed successfully!');
-      return newOrder.id;
+      return orderId;
     } catch (error) {
       console.error('Error placing order:', error);
-      toast.error(error instanceof Error ? error.message : 'Failed to place order');
-      return null;
-    } finally {
       setState(prev => ({ ...prev, loading: false }));
+      toast.error(error instanceof Error ? error.message : 'Failed to place order');
+      throw error;
     }
   }, [user, state.cart, state.cartId]);
 
@@ -267,6 +249,6 @@ export function useCartOperations(user: User | null) {
     removeFromCart,
     updateQuantity,
     clearCart,
-    placeOrder
+    placeOrder: placeOrderCallback
   };
 }
