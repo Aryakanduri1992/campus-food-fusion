@@ -2,7 +2,7 @@
 import React from 'react';
 import OwnerDashboard from '@/components/owner/OwnerDashboard';
 
-const Owner = () => {
+const Owner: React.FC = () => {
   return <OwnerDashboard />;
 };
 
