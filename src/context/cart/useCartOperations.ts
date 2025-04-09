@@ -2,19 +2,21 @@
 import { useState, useCallback } from 'react';
 import { CartItem, CartState } from './types';
 import { toast } from "sonner";
-import { supabase } from '@/integrations/supabase/client';
 import { User } from '@supabase/supabase-js';
-import {
+import { FoodItem } from '@/types';
+import { 
   saveCartToLocalStorage,
   loadCartFromLocalStorage,
   clearCartFromLocalStorage,
-  formatDbCartItems,
-  cartItemsToDbFormat,
   deleteCartItems,
   insertCartItems,
-  createNewCart
+  createNewCart,
+  fetchUserCarts,
+  fetchCartItems,
+  cartItemsToDbFormat,
+  createOrder,
+  createOrderItems
 } from './utils';
-import { FoodItem } from '@/types';
 
 export function useCartOperations(user: User | null) {
   const [state, setState] = useState<CartState>({
@@ -63,14 +65,7 @@ export function useCartOperations(user: User | null) {
         return;
       }
       
-      const { data: existingCarts, error: cartsError } = await supabase
-        .from('carts')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false })
-        .limit(1);
-        
-      if (cartsError) throw cartsError;
+      const existingCarts = await fetchUserCarts(user.id);
       
       console.log('Existing carts:', existingCarts);
         
@@ -79,32 +74,28 @@ export function useCartOperations(user: User | null) {
       if (existingCarts && existingCarts.length > 0) {
         currentCartId = existingCarts[0].id;
         
-        const { data: cartItems, error: itemsError } = await supabase
-          .from('cart_items')
-          .select('*')
-          .eq('cart_id', currentCartId);
+        try {
+          const formattedItems = await fetchCartItems(currentCartId);
           
-        if (itemsError) throw itemsError;
-        
-        console.log('Cart items from DB:', cartItems);
-          
-        if (cartItems && cartItems.length > 0) {
-          const formattedItems = formatDbCartItems(cartItems);
-          
-          console.log('Formatted cart items:', formattedItems);
-          setState(prev => ({ ...prev, cart: formattedItems, cartId: currentCartId }));
-          saveCartToLocalStorage(formattedItems);
-        } else {
-          console.log('Cart exists but is empty, checking local storage');
-          const savedCart = loadCartFromLocalStorage();
-          if (savedCart && savedCart.length > 0) {
-            console.log('Found items in local storage, syncing to DB');
-            setState(prev => ({ ...prev, cart: savedCart, cartId: currentCartId }));
-            await syncCartToDatabase(savedCart, currentCartId);
+          if (formattedItems.length > 0) {
+            console.log('Formatted cart items:', formattedItems);
+            setState(prev => ({ ...prev, cart: formattedItems, cartId: currentCartId }));
+            saveCartToLocalStorage(formattedItems);
           } else {
-            setState(prev => ({ ...prev, cart: [], cartId: currentCartId }));
-            saveCartToLocalStorage([]);
+            console.log('Cart exists but is empty, checking local storage');
+            const savedCart = loadCartFromLocalStorage();
+            if (savedCart && savedCart.length > 0) {
+              console.log('Found items in local storage, syncing to DB');
+              setState(prev => ({ ...prev, cart: savedCart, cartId: currentCartId }));
+              await syncCartToDatabase(savedCart, currentCartId);
+            } else {
+              setState(prev => ({ ...prev, cart: [], cartId: currentCartId }));
+              saveCartToLocalStorage([]);
+            }
           }
+        } catch (error) {
+          console.error('Error fetching cart items:', error);
+          throw error;
         }
       } else if (user) {
         console.log('Creating new cart for user:', user.id);
@@ -240,44 +231,12 @@ export function useCartOperations(user: User | null) {
       }, 0);
       
       // Create the order record first
-      const { data: newOrder, error: orderError } = await supabase
-        .from('orders')
-        .insert({
-          user_id: user.id,
-          total_price: totalPrice
-        })
-        .select()
-        .single();
-        
-      if (orderError) {
-        console.error('Order creation error:', orderError);
-        throw new Error('Failed to create order');
-      }
-      
-      if (!newOrder) {
-        throw new Error('No order was created');
-      }
+      const newOrder = await createOrder(user.id, totalPrice);
       
       console.log('Order created successfully:', newOrder);
       
       // Now create the order items
-      const orderItems = state.cart.map(item => ({
-        order_id: newOrder.id,
-        food_item_id: item.foodItem.id,
-        food_name: item.foodItem.name,
-        food_price: item.foodItem.price,
-        food_image_url: item.foodItem.imageUrl,
-        quantity: item.quantity
-      }));
-      
-      const { error: itemsError } = await supabase
-        .from('order_items')
-        .insert(orderItems);
-        
-      if (itemsError) {
-        console.error('Order items creation error:', itemsError);
-        throw new Error('Failed to add items to order');
-      }
+      await createOrderItems(newOrder.id, state.cart);
       
       // Clear the cart after successful order creation
       if (state.cartId) {
