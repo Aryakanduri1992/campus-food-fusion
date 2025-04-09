@@ -124,6 +124,9 @@ export function usePaymentForm(orderId: string | number | null, locationData: Lo
       const timer = setTimeout(async () => {
         try {
           if (orderId) {
+            // Fix: Convert orderId to string before using it in the query
+            const orderIdString = orderId.toString();
+            
             const { error } = await supabase
               .from('orders')
               .update({ 
@@ -133,7 +136,7 @@ export function usePaymentForm(orderId: string | number | null, locationData: Lo
                 delivery_pincode: locationData?.pincode,
                 delivery_instructions: locationData?.instructions
               })
-              .eq('id', orderId);
+              .eq('id', orderIdString);
               
             if (error) {
               throw error;
