@@ -1,17 +1,10 @@
 
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { Navigate, Outlet } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
-import LoadingState from '@/components/LoadingState';
 
 const CustomerRoutes: React.FC = () => {
-  const { user, loading, isOwner, isDeliveryPartner } = useAuth();
-  const [checking, setChecking] = useState(false);
-  
-  // Handle role-based redirects
-  if (loading) {
-    return <LoadingState message="Loading..." />;
-  }
+  const { user, isOwner, isDeliveryPartner } = useAuth();
   
   // Redirect owners and delivery partners to their respective dashboards
   if (user && isOwner) {
