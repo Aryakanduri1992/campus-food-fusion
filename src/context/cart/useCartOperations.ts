@@ -7,16 +7,19 @@ import { FoodItem } from '@/types';
 import { 
   saveCartToLocalStorage,
   loadCartFromLocalStorage,
-  clearCartFromLocalStorage,
-  deleteCartItems,
-  insertCartItems,
-  createNewCart,
-  fetchUserCarts,
+  clearCartFromLocalStorage
+} from './services/cartStorageService';
+import { 
+  deleteCartItems, 
+  insertCartItems, 
+  createNewCart, 
+  fetchUserCarts, 
   fetchCartItems,
   cartItemsToDbFormat,
+  formatDbCartItems,
   createOrder,
   createOrderItems
-} from './utils';
+} from './services/cartDatabaseService';
 
 export function useCartOperations(user: User | null) {
   const [state, setState] = useState<CartState>({

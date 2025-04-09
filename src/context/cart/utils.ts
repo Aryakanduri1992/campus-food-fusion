@@ -9,7 +9,14 @@ export {
 
 export {
   cartItemsToDbFormat,
-  formatDbCartItems
+  formatDbCartItems,
+  createNewCart,
+  deleteCartItems,
+  insertCartItems,
+  fetchCartItems,
+  fetchUserCarts,
+  createOrder,
+  createOrderItems
 } from './services/cartDatabaseService';
 
 // Calculate total price of cart
