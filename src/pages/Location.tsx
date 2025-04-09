@@ -2,18 +2,21 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { toast } from 'sonner';
-import { MapPin, Navigation, Loader2 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useCart } from '@/context/CartContext'; 
 import { useForm } from 'react-hook-form';
-import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 
+// Import our new components
+import LocationAddressForm, { LocationFormValues } from '@/components/location/LocationAddressForm';
+import OrderSummaryCard from '@/components/location/OrderSummaryCard';
+import LocationLoadingState from '@/components/location/LocationLoadingState';
+import LocationEmptyCart from '@/components/location/LocationEmptyCart';
+import { useGeolocation } from '@/hooks/useGeolocation';
+
+// Re-export the schema for consistency
 const locationSchema = z.object({
   address: z.string().min(5, 'Address is required and must be at least 5 characters'),
   landmark: z.string().optional(),
@@ -22,8 +25,6 @@ const locationSchema = z.object({
   instructions: z.string().optional(),
 });
 
-type LocationFormValues = z.infer<typeof locationSchema>;
-
 const Location: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -31,8 +32,6 @@ const Location: React.FC = () => {
   const { cart, getTotalPrice, fetchCart } = useCart();
   const [loading, setLoading] = useState(false);
   const [cartLoading, setCartLoading] = useState(true);
-  const [usingCurrentLocation, setUsingCurrentLocation] = useState(false);
-  const [currentCoordinates, setCurrentCoordinates] = useState<{lat: number, lng: number} | null>(null);
   
   // Get data from location state or use cart data
   const orderId = location.state?.orderId;
@@ -50,6 +49,11 @@ const Location: React.FC = () => {
       city: '',
       instructions: '',
     }
+  });
+
+  // Use our custom hook for geolocation
+  const { usingCurrentLocation, currentCoordinates, detectCurrentLocation } = useGeolocation({
+    onLocationDetected: (lat, lng) => fetchAddressFromCoordinates(lat, lng)
   });
 
   useEffect(() => {
@@ -70,32 +74,6 @@ const Location: React.FC = () => {
       navigate('/cart');
     }
   }, [cart, orderId, navigate, cartLoading]);
-
-  const detectCurrentLocation = () => {
-    setUsingCurrentLocation(true);
-    
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          const { latitude, longitude } = position.coords;
-          setCurrentCoordinates({ lat: latitude, lng: longitude });
-          
-          // Fetch address from coordinates using reverse geocoding
-          fetchAddressFromCoordinates(latitude, longitude);
-          setUsingCurrentLocation(false);
-          toast.success('Location detected successfully');
-        },
-        (error) => {
-          console.error('Error getting location:', error);
-          toast.error('Failed to detect location. Please enter manually.');
-          setUsingCurrentLocation(false);
-        }
-      );
-    } else {
-      toast.error('Geolocation is not supported by your browser');
-      setUsingCurrentLocation(false);
-    }
-  };
 
   const fetchAddressFromCoordinates = async (lat: number, lng: number) => {
     try {
@@ -139,29 +117,12 @@ const Location: React.FC = () => {
 
   // Show loading state while cart is being fetched
   if (cartLoading) {
-    return (
-      <div className="container mx-auto px-4 py-12 mb-16 md:mb-0 flex flex-col items-center justify-center">
-        <Loader2 className="h-12 w-12 animate-spin text-rv-navy mb-4" />
-        <p className="text-lg">Loading your delivery information...</p>
-      </div>
-    );
+    return <LocationLoadingState />;
   }
 
   // Fallback if no orderId and cart is empty
   if (cart.length === 0 && !orderId) {
-    return (
-      <div className="container mx-auto px-4 py-12 mb-16 md:mb-0">
-        <Card className="max-w-md mx-auto">
-          <CardHeader>
-            <CardTitle className="text-center text-rv-navy">Empty Cart</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4 text-center">
-            <p>Your cart is empty.</p>
-            <Button onClick={() => navigate('/menu')}>Browse Menu</Button>
-          </CardContent>
-        </Card>
-      </div>
-    );
+    return <LocationEmptyCart />;
   }
 
   return (
@@ -172,126 +133,15 @@ const Location: React.FC = () => {
             <CardTitle className="text-center text-rv-navy">Delivery Location</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="mb-4 p-4 bg-gray-50 rounded-md">
-              <div className="flex justify-between">
-                <span className="font-semibold">Order ID:</span>
-                <span className="text-gray-600">{orderId ? orderId.substring(0, 8) : 'New Order'}</span>
-              </div>
-              <div className="flex justify-between mt-2">
-                <span className="font-semibold">Total Amount:</span>
-                <span className="font-bold text-rv-burgundy">₹{totalAmount.toFixed(2)}</span>
-              </div>
-            </div>
+            <OrderSummaryCard orderId={orderId} totalAmount={totalAmount} />
             
-            <Button 
-              onClick={detectCurrentLocation} 
-              type="button" 
-              className="w-full mb-6"
-              variant="outline"
-              disabled={usingCurrentLocation}
-            >
-              {usingCurrentLocation ? 'Detecting Location...' : 'Use Current Location'}
-              <MapPin className="ml-2 h-4 w-4" />
-            </Button>
-            
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                <FormField
-                  control={form.control}
-                  name="address"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Full Address</FormLabel>
-                      <FormControl>
-                        <Textarea placeholder="Enter your full address" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                
-                <FormField
-                  control={form.control}
-                  name="landmark"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Landmark (Optional)</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Nearby landmark" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                
-                <div className="grid grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="pincode"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Pincode</FormLabel>
-                        <FormControl>
-                          <Input placeholder="123456" {...field} maxLength={6} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <FormField
-                    control={form.control}
-                    name="city"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>City</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Your city" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-                
-                <FormField
-                  control={form.control}
-                  name="instructions"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Delivery Instructions (Optional)</FormLabel>
-                      <FormControl>
-                        <Textarea placeholder="Any special instructions for delivery" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                
-                <Button 
-                  type="submit"
-                  className="w-full bg-rv-navy hover:bg-rv-burgundy"
-                  disabled={loading}
-                >
-                  {loading ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Processing...
-                    </>
-                  ) : 'Continue to Payment'}
-                </Button>
-                
-                <Button 
-                  type="button"
-                  variant="outline"
-                  className="w-full mt-2"
-                  onClick={() => navigate('/cart')}
-                  disabled={loading}
-                >
-                  Back to Cart
-                </Button>
-              </form>
-            </Form>
+            <LocationAddressForm
+              form={form}
+              onSubmit={onSubmit}
+              loading={loading}
+              usingCurrentLocation={usingCurrentLocation}
+              detectCurrentLocation={detectCurrentLocation}
+            />
           </CardContent>
         </Card>
       </div>
