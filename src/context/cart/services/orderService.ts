@@ -45,13 +45,13 @@ export const placeOrder = async (
     }));
     
     // Call the updated create_new_order function with items included
-    const { data, error } = await supabase.rpc<CreateOrderResponse>(
+    const { data, error } = await supabase.rpc<CreateOrderResponse, CreateOrderParams>(
       'create_new_order', 
       { 
         user_id_param: userId,
         total_price_param: totalPrice,
         items_json: JSON.stringify(orderItemsJson)
-      } as CreateOrderParams
+      }
     );
       
     if (error) {
