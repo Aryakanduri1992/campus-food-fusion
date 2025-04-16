@@ -7,7 +7,8 @@ import { useAuth } from '@/context/AuthContext';
 import PaymentLoading from '@/components/payment/PaymentLoading';
 import PaymentSuccess from '@/components/payment/PaymentSuccess';
 import PaymentForm from '@/components/payment/PaymentForm';
-import { usePaymentForm, LocationData } from '@/hooks/usePaymentForm';
+import { usePaymentForm } from '@/hooks/usePaymentForm';
+import { LocationData } from '@/components/payment/types/payment';
 
 const Payment = () => {
   const { cart, getTotalPrice, loading: cartLoading, fetchCart } = useCart();

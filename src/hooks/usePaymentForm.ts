@@ -8,6 +8,9 @@ import { formatCardNumber, formatExpiryDate, validatePaymentFields } from '@/com
 import { processOrderPayment } from '@/components/payment/services/paymentService';
 import { LocationData, PaymentFormState } from '@/components/payment/types/payment';
 
+// Re-export the LocationData type for components that import it from this file
+export type { LocationData };
+
 export function usePaymentForm(orderId: string | number | null, locationData: LocationData | undefined) {
   const navigate = useNavigate();
   const [state, setState] = useState<PaymentFormState>({
