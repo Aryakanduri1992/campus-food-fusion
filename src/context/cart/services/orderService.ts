@@ -5,6 +5,12 @@ import {
   clearCartFromLocalStorage
 } from './cartStorageService';
 
+// Define the parameters for the create_new_order RPC function
+interface CreateOrderParams {
+  user_id_param: string;
+  total_price_param: number;
+}
+
 // Define the type for our order response
 interface CreateOrderResponse {
   id: number;
@@ -28,8 +34,8 @@ export const placeOrder = async (
       return total + (item.foodItem.price * item.quantity);
     }, 0);
     
-    // Call the create_new_order function
-    const { data, error } = await supabase.rpc<CreateOrderResponse>(
+    // Call the create_new_order function with proper typing
+    const { data, error } = await supabase.rpc<CreateOrderResponse, CreateOrderParams>(
       'create_new_order', 
       { 
         user_id_param: userId,
@@ -43,14 +49,19 @@ export const placeOrder = async (
     }
     
     // Ensure we have a valid order ID
-    if (!data || typeof data.id !== 'number') {
+    if (!data) {
       throw new Error('No order was created');
+    }
+    
+    const orderId = (data as CreateOrderResponse).id;
+    if (typeof orderId !== 'number') {
+      throw new Error('Invalid order ID returned');
     }
 
     // Create order items after order is created
     try {
       const orderItems = cart.map(item => ({
-        order_id: data.id,
+        order_id: orderId,
         food_item_id: item.foodItem.id,
         food_name: item.foodItem.name,
         food_price: item.foodItem.price,
@@ -86,7 +97,7 @@ export const placeOrder = async (
     }
     clearCartFromLocalStorage();
     
-    return data.id;
+    return orderId;
   } catch (error) {
     console.error('Error placing order:', error);
     throw error;
