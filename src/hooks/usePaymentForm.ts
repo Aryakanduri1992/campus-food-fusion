@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCart } from '@/context/CartContext';
@@ -8,7 +7,6 @@ import { formatCardNumber, formatExpiryDate, validatePaymentFields } from '@/com
 import { processOrderPayment } from '@/components/payment/services/paymentService';
 import { LocationData, PaymentFormState } from '@/components/payment/types/payment';
 
-// Re-export the LocationData type for components that import it from this file
 export type { LocationData };
 
 export function usePaymentForm(orderId: string | number | null, locationData: LocationData | undefined) {
@@ -26,7 +24,6 @@ export function usePaymentForm(orderId: string | number | null, locationData: Lo
 
   const { cart, clearCart } = useCart();
 
-  // Debug logging
   useEffect(() => {
     console.log("Payment form - Location data:", locationData);
     console.log("Payment form - Order ID:", orderId);
@@ -79,7 +76,6 @@ export function usePaymentForm(orderId: string | number | null, locationData: Lo
         throw new Error('User not authenticated');
       }
 
-      // Create a new order if one doesn't exist
       let orderIdToUse = orderId;
       
       if (!orderIdToUse) {
@@ -95,13 +91,10 @@ export function usePaymentForm(orderId: string | number | null, locationData: Lo
           throw new Error(error?.message || 'Failed to create order');
         }
         
-        // The data returned from the RPC is an object with an id property
-        // We need to ensure it's the correct type before assigning
         if (typeof data === 'object' && data !== null && 'id' in data) {
-          const orderId = data.id;
-          // Make sure orderId is a string or number
-          if (typeof orderId === 'string' || typeof orderId === 'number') {
-            orderIdToUse = orderId;
+          const newOrderId = data.id;
+          if (typeof newOrderId === 'string' || typeof newOrderId === 'number') {
+            orderIdToUse = newOrderId;
           } else {
             throw new Error('Invalid order ID type from create_new_order');
           }
@@ -110,7 +103,6 @@ export function usePaymentForm(orderId: string | number | null, locationData: Lo
         }
       }
       
-      // Process the payment and update order status
       const orderIdNumber = typeof orderIdToUse === 'string' ? parseInt(orderIdToUse, 10) : orderIdToUse;
       
       if (orderIdNumber && !isNaN(Number(orderIdNumber))) {
@@ -129,7 +121,6 @@ export function usePaymentForm(orderId: string | number | null, locationData: Lo
     }
   };
 
-  // Handle payment processing animation
   useEffect(() => {
     if (state.processingPayment) {
       const interval = setInterval(() => {
@@ -147,7 +138,6 @@ export function usePaymentForm(orderId: string | number | null, locationData: Lo
     }
   }, [state.processingPayment]);
 
-  // Handle payment completion
   useEffect(() => {
     if (state.progressValue === 100 && state.processingPayment) {
       const timer = setTimeout(() => {

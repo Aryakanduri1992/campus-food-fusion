@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -34,10 +33,10 @@ const Location: React.FC = () => {
   
   const orderId = location.state?.orderId;
   const totalAmount = location.state?.totalAmount || getTotalPrice();
-  
+
   console.log("Location page - Order ID:", orderId);
   console.log("Location page - Total Amount:", totalAmount);
-  
+
   const form = useForm<LocationFormValues>({
     resolver: zodResolver(locationSchema),
     defaultValues: {
@@ -91,7 +90,6 @@ const Location: React.FC = () => {
 
   const onSubmit = async (data: LocationFormValues) => {
     setLoading(true);
-    setError(null);
     
     try {
       if (!user) {
@@ -114,15 +112,9 @@ const Location: React.FC = () => {
         pincode: data.pincode,
         landmark: data.landmark || '',
         instructions: data.instructions || '',
-        coordinates: currentCoordinates || null,
         totalAmount: totalAmountValue
       };
-      
-      console.log("Sending to payment page - Location data:", locationData);
-      console.log("Sending to payment page - Total amount:", totalAmountValue);
-      console.log("Sending to payment page - Order ID:", orderId);
-      
-      // Navigate with replace to prevent back navigation issues
+
       navigate('/payment', { 
         state: { 
           orderId,
