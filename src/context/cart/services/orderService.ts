@@ -28,22 +28,21 @@ export const placeOrder = async (
       return total + (item.foodItem.price * item.quantity);
     }, 0);
     
-    // Use a custom RPC function to bypass RLS permissions
-    // Note: We use 'any' for the function name since TypeScript definitions 
-    // don't include our custom functions by default
-    const { data: newOrder, error } = await supabase
-      .rpc<CreateOrderResponse, { user_id_param: string; total_price_param: number }>(
-        'create_new_order' as any, 
-        { 
-          user_id_param: userId,
-          total_price_param: totalPrice
-        }
-      );
+    // The TypeScript definition in supabase-js doesn't include our custom functions
+    // so we need to use a more generic approach
+    const { data, error } = await supabase
+      .rpc('create_new_order', { 
+        user_id_param: userId,
+        total_price_param: totalPrice
+      });
       
     if (error) {
       console.error('Order creation error:', error);
       throw new Error(error.message || 'Failed to create order');
     }
+    
+    // Cast the response to our expected type
+    const newOrder = data as CreateOrderResponse;
     
     if (!newOrder || !newOrder.id) {
       throw new Error('No order was created');
