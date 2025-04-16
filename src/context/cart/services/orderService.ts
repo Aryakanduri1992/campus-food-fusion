@@ -32,10 +32,13 @@ export const placeOrder = async (
     // Note: We use 'any' for the function name since TypeScript definitions 
     // don't include our custom functions by default
     const { data: newOrder, error } = await supabase
-      .rpc<CreateOrderResponse>('create_new_order' as any, { 
-        user_id_param: userId,
-        total_price_param: totalPrice
-      });
+      .rpc<CreateOrderResponse, { user_id_param: string; total_price_param: number }>(
+        'create_new_order' as any, 
+        { 
+          user_id_param: userId,
+          total_price_param: totalPrice
+        }
+      );
       
     if (error) {
       console.error('Order creation error:', error);
