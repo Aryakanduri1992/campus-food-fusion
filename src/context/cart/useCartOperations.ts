@@ -215,25 +215,23 @@ export function useCartOperations(user: User | null) {
     }
   }, [user, state.cartId]);
 
-  const placeOrderCallback = useCallback(async (): Promise<number | null> => {
+  const placeOrderCallback = useCallback(async (userId?: string, cartItems?: CartItem[], cartId?: string | null): Promise<number> => {
     if (!user) {
       toast.error('Please log in to place an order');
-      return null;
+      return 0;
     }
     
     if (state.cart.length === 0) {
       toast.error('Your cart is empty');
-      return null;
+      return 0;
     }
     
     setState(prev => ({ ...prev, loading: true }));
     try {
-      const orderId = await placeOrder(user.id, state.cart, state.cartId);
-      clearCartFromLocalStorage();
-      setState(prev => ({ ...prev, cart: [], loading: false }));
+      const totalPrice = await placeOrder(user.id, state.cart, state.cartId);
+      setState(prev => ({ ...prev, loading: false }));
       
-      toast.success('Order placed successfully!');
-      return orderId;
+      return totalPrice;
     } catch (error) {
       console.error('Error placing order:', error);
       setState(prev => ({ ...prev, loading: false }));

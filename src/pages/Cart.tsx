@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useCart } from '@/context/CartContext';
 import { useNavigate } from 'react-router-dom';
@@ -57,7 +58,7 @@ const Cart: React.FC = () => {
     setOrderError(null);
     
     try {
-      const { totalPrice } = await placeOrder(user.id, cart, state.cartId);
+      const totalPrice = await placeOrder();
       
       navigate('/location', { 
         state: { 

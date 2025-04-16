@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from "sonner";
@@ -9,6 +10,8 @@ export interface LocationData {
   city: string;
   pincode: string;
   instructions?: string;
+  totalAmount?: number;
+  coordinates?: { lat: number, lng: number };
 }
 
 export interface PaymentFormState {
@@ -35,7 +38,7 @@ export function usePaymentForm(orderId: string | number | null, locationData: Lo
     showDeliveryInfo: false,
   });
 
-  const { cart, clearCart, state: cartState } = useCart();
+  const { cart, clearCart } = useCart();
 
   const setPaymentMethod = (value: 'card' | 'upi') => {
     setState(prev => ({ ...prev, paymentMethod: value }));
@@ -95,8 +98,8 @@ export function usePaymentForm(orderId: string | number | null, locationData: Lo
     
     try {
       // After successful payment processing, create the order in the database
-      const { user } = await supabase.auth.getUser();
-      if (!user?.user) {
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData?.user) {
         throw new Error('User not authenticated');
       }
 
@@ -181,7 +184,8 @@ export function usePaymentForm(orderId: string | number | null, locationData: Lo
         }
       };
 
-      const orderIdFinal = await finalizeOrder(user.user.id, cart, cartState.cartId, Number(locationData?.totalAmount));
+      const totalAmount = locationData?.totalAmount || 0;
+      const orderIdFinal = await finalizeOrder(userData.user.id, cart, null, totalAmount);
       console.log("Order finalized with ID:", orderIdFinal);
       
     } catch (error) {

@@ -20,7 +20,7 @@ export interface CartContextType {
   clearCart: () => void;
   getTotalItems: () => number;
   getTotalPrice: () => number;
-  placeOrder: () => Promise<number | null>;
+  placeOrder: () => Promise<number>;
   loading: boolean;
   fetchCart: () => Promise<void>;
 }

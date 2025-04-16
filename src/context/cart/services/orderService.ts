@@ -24,7 +24,7 @@ export const placeOrder = async (
   userId: string, 
   cart: CartItem[], 
   cartId: string | null
-): Promise<{ totalPrice: number }> => {
+): Promise<number> => {
   if (cart.length === 0) {
     throw new Error('Your cart is empty');
   }
@@ -34,7 +34,7 @@ export const placeOrder = async (
     return total + (item.foodItem.price * item.quantity);
   }, 0);
   
-  return { totalPrice };
+  return totalPrice;
 };
 
 export const finalizeOrder = async (
