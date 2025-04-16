@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -29,6 +30,7 @@ const Location: React.FC = () => {
   const { cart, getTotalPrice, fetchCart } = useCart();
   const [loading, setLoading] = useState(false);
   const [cartLoading, setCartLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   
   const orderId = location.state?.orderId;
   const totalAmount = location.state?.totalAmount || getTotalPrice();
@@ -55,8 +57,15 @@ const Location: React.FC = () => {
   useEffect(() => {
     const loadCart = async () => {
       setCartLoading(true);
-      await fetchCart();
-      setCartLoading(false);
+      try {
+        await fetchCart();
+        setError(null);
+      } catch (err) {
+        console.error('Error loading cart:', err);
+        setError('Failed to load cart. Please try again.');
+      } finally {
+        setCartLoading(false);
+      }
     };
     
     loadCart();
@@ -65,7 +74,7 @@ const Location: React.FC = () => {
   useEffect(() => {
     if (!cartLoading && cart.length === 0 && !orderId && !totalAmount) {
       toast.error('Your cart is empty');
-      navigate('/cart');
+      navigate('/cart', { replace: true });
     }
   }, [cart, orderId, navigate, cartLoading, totalAmount]);
 
@@ -76,18 +85,26 @@ const Location: React.FC = () => {
       form.setValue('pincode', '123456');
     } catch (error) {
       console.error('Error fetching address:', error);
+      toast.error('Failed to fetch address from your location');
     }
   };
 
   const onSubmit = async (data: LocationFormValues) => {
     setLoading(true);
+    setError(null);
     
     try {
+      if (!user) {
+        toast.error("Please log in to continue");
+        navigate('/auth', { replace: true });
+        return;
+      }
+      
       const totalAmountValue = totalAmount || getTotalPrice();
       
       if (!totalAmountValue || totalAmountValue <= 0) {
+        setError("Invalid total amount. Please try again.");
         toast.error("Invalid total amount");
-        setLoading(false);
         return;
       }
       
@@ -105,6 +122,7 @@ const Location: React.FC = () => {
       console.log("Sending to payment page - Total amount:", totalAmountValue);
       console.log("Sending to payment page - Order ID:", orderId);
       
+      // Navigate with replace to prevent back navigation issues
       navigate('/payment', { 
         state: { 
           orderId,
@@ -115,6 +133,7 @@ const Location: React.FC = () => {
       });
     } catch (error) {
       console.error("Error proceeding to payment:", error);
+      setError("Failed to proceed to payment. Please try again.");
       toast.error("Failed to proceed to payment. Please try again.");
     } finally {
       setLoading(false);
@@ -137,7 +156,11 @@ const Location: React.FC = () => {
             <CardTitle className="text-center text-rv-navy">Delivery Location</CardTitle>
           </CardHeader>
           <CardContent>
-            <OrderSummaryCard orderId={orderId} totalAmount={totalAmount} />
+            <OrderSummaryCard 
+              orderId={orderId} 
+              totalAmount={totalAmount}
+              error={error} 
+            />
             
             <LocationAddressForm
               form={form}

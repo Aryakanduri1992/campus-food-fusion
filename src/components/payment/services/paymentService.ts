@@ -16,6 +16,20 @@ export const processOrderPayment = async (
       userId
     });
     
+    // First check if the order exists and belongs to this user
+    const { data: orderData, error: orderCheckError } = await supabase
+      .from('orders')
+      .select('*')
+      .eq('id', orderId)
+      .eq('user_id', userId)
+      .single();
+      
+    if (orderCheckError || !orderData) {
+      console.error("Order validation error:", orderCheckError);
+      throw new Error('Could not validate order. Please try again.');
+    }
+    
+    // Then update the order with delivery information
     const { error } = await supabase
       .from('orders')
       .update({ 
@@ -26,7 +40,8 @@ export const processOrderPayment = async (
         delivery_instructions: locationData.instructions || '',
         delivery_landmark: locationData.landmark || ''
       })
-      .eq('id', orderId);
+      .eq('id', orderId)
+      .eq('user_id', userId);
       
     if (error) {
       console.error("Error in processOrderPayment:", error);

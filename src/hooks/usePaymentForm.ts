@@ -61,13 +61,13 @@ export function usePaymentForm(orderId: string | number | null, locationData: Lo
       cvv: state.cvv,
       nameOnCard: state.nameOnCard
     })) {
-      toast.error("Please fill in all card details");
+      toast.error("Please fill in all card details correctly");
       return;
     }
     
     if (!locationData) {
       toast.error("Delivery information is missing. Please enter your delivery details.");
-      navigate('/location');
+      navigate('/location', { replace: true });
       return;
     }
     
@@ -79,22 +79,32 @@ export function usePaymentForm(orderId: string | number | null, locationData: Lo
         throw new Error('User not authenticated');
       }
 
-      const { data, error } = await supabase.rpc(
-        'create_new_order',
-        {
-          user_id_param: userData.user.id,
-          total_price_param: locationData.totalAmount || 0
+      // Create a new order if one doesn't exist
+      let orderIdToUse = orderId;
+      
+      if (!orderIdToUse) {
+        const { data, error } = await supabase.rpc(
+          'create_new_order',
+          {
+            user_id_param: userData.user.id,
+            total_price_param: locationData.totalAmount || 0
+          }
+        );
+
+        if (error || !data) {
+          throw new Error(error?.message || 'Failed to create order');
         }
-      );
-
-      if (error || !data) {
-        throw new Error(error?.message || 'Failed to create order');
+        
+        orderIdToUse = data.id;
       }
-
-      const orderIdNumber = typeof orderId === 'string' ? parseInt(orderId, 10) : orderId;
+      
+      // Process the payment and update order status
+      const orderIdNumber = typeof orderIdToUse === 'string' ? parseInt(orderIdToUse, 10) : orderIdToUse;
       
       if (orderIdNumber && !isNaN(Number(orderIdNumber))) {
         await processOrderPayment(Number(orderIdNumber), locationData, userData.user.id);
+      } else {
+        throw new Error('Invalid order ID');
       }
       
       setState(prev => ({ ...prev, showDeliveryInfo: true }));

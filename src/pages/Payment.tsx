@@ -15,6 +15,7 @@ const Payment = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const { user } = useAuth();
   
   // Extract location state data (ensuring it's properly typed)
@@ -53,27 +54,41 @@ const Payment = () => {
   useEffect(() => {
     const loadCart = async () => {
       setIsLoading(true);
-      await fetchCart();
-      setIsLoading(false);
+      try {
+        await fetchCart();
+        setError(null);
+      } catch (err) {
+        console.error('Error loading cart:', err);
+        setError('Failed to load cart data');
+      } finally {
+        setIsLoading(false);
+      }
     };
     
     loadCart();
   }, [fetchCart]);
 
   useEffect(() => {
-    // Only redirect if we've finished loading AND we're not already in the process of checking out
-    if (!isLoading) {
-      // Check for location data first - this is the most important check
-      if (!locationData && !processingPayment && !showDeliveryInfo) {
+    // Only redirect if we've loaded and aren't in payment process or success state
+    if (!isLoading && !processingPayment && !showDeliveryInfo) {
+      // Check for location data first
+      if (!locationData) {
         toast.error("Please enter your delivery details first");
-        navigate('/location');
+        navigate('/location', { replace: true });
+        return;
+      }
+      
+      // Validate total amount
+      if (!totalAmount || totalAmount <= 0) {
+        toast.error("Invalid order amount");
+        navigate('/cart', { replace: true });
         return;
       }
       
       // Then check for empty cart when not in order flow
-      if (cart.length === 0 && !orderId && !totalAmount && !processingPayment && !showDeliveryInfo) {
+      if (cart.length === 0 && !orderId && !totalAmount) {
         toast.error("Your cart is empty. Please add items before proceeding to payment.");
-        navigate('/cart');
+        navigate('/cart', { replace: true });
         return;
       }
     }
