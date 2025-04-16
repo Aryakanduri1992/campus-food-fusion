@@ -5,6 +5,15 @@ import {
   clearCartFromLocalStorage
 } from './cartStorageService';
 
+// Define the type for our order response
+interface CreateOrderResponse {
+  id: number;
+  user_id: string;
+  total_price: number;
+  status: string;
+  created_at: string;
+}
+
 export const placeOrder = async (
   userId: string, 
   cart: CartItem[], 
@@ -19,10 +28,11 @@ export const placeOrder = async (
       return total + (item.foodItem.price * item.quantity);
     }, 0);
     
-    // Use the service_role key by directly setting the user_id without RLS checks
-    // This is done via a rpc function call to bypass permission issues
+    // Use a custom RPC function to bypass RLS permissions
+    // Note: We use 'any' for the function name since TypeScript definitions 
+    // don't include our custom functions by default
     const { data: newOrder, error } = await supabase
-      .rpc('create_new_order', { 
+      .rpc<CreateOrderResponse>('create_new_order' as any, { 
         user_id_param: userId,
         total_price_param: totalPrice
       });
