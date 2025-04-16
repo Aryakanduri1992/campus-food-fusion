@@ -18,8 +18,9 @@ const Payment = () => {
   const [error, setError] = useState<string | null>(null);
   const { user } = useAuth();
   
-  // Extract location state data (ensuring it's properly typed)
-  const locationData = location.state?.locationData as LocationData | undefined;
+  // Extract and parse location state data
+  const locationDataString = location.state?.locationData as string | undefined;
+  const locationData = locationDataString ? JSON.parse(locationDataString) as LocationData : undefined;
   const orderId = location.state?.orderId;
   const totalAmount = location.state?.totalAmount || getTotalPrice();
   

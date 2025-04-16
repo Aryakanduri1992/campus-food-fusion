@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -106,6 +107,7 @@ const Location: React.FC = () => {
         return;
       }
       
+      // Prepare location data object
       const locationData = {
         address: data.address,
         city: data.city,
@@ -115,11 +117,19 @@ const Location: React.FC = () => {
         totalAmount: totalAmountValue
       };
 
+      // Log what we're sending to the payment page
+      console.log("Sending to payment page:", { 
+        orderId, 
+        totalAmount: totalAmountValue,
+        locationData
+      });
+
+      // Navigate with the state data, including the stringified locationData
       navigate('/payment', { 
         state: { 
           orderId,
           totalAmount: totalAmountValue,
-          locationData
+          locationData: JSON.stringify(locationData)
         },
         replace: true
       });
