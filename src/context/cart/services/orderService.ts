@@ -28,12 +28,22 @@ export const placeOrder = async (
       return total + (item.foodItem.price * item.quantity);
     }, 0);
     
-    // We need to use a type assertion to handle the custom RPC function
+    // Format order items for the database function
+    const orderItemsJson = cart.map(item => ({
+      food_item_id: item.foodItem.id,
+      food_name: item.foodItem.name,
+      food_price: item.foodItem.price,
+      food_image_url: item.foodItem.imageUrl,
+      quantity: item.quantity
+    }));
+    
+    // Call the new create_new_order function with items included
     const { data, error } = await supabase.rpc(
-      'create_new_order' as any, 
+      'create_new_order', 
       { 
         user_id_param: userId,
-        total_price_param: totalPrice
+        total_price_param: totalPrice,
+        items_json: JSON.stringify(orderItemsJson)
       }
     );
       
@@ -49,25 +59,6 @@ export const placeOrder = async (
     
     const orderData = data as CreateOrderResponse;
     console.log('Order created successfully:', orderData);
-    
-    // Now create the order items
-    const orderItems = cart.map(item => ({
-      order_id: orderData.id,
-      food_item_id: item.foodItem.id,
-      food_name: item.foodItem.name,
-      food_price: item.foodItem.price,
-      food_image_url: item.foodItem.imageUrl,
-      quantity: item.quantity
-    }));
-    
-    const { error: itemsError } = await supabase
-      .from('order_items')
-      .insert(orderItems);
-      
-    if (itemsError) {
-      console.error('Order items creation error:', itemsError);
-      throw new Error('Failed to add items to order: ' + itemsError.message);
-    }
     
     // Clear the cart after successful order creation
     if (cartId) {
