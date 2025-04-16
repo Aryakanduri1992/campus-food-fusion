@@ -35,7 +35,8 @@ export const placeOrder = async (
     }, 0);
     
     // Call the create_new_order function with proper typing
-    const { data, error } = await supabase.rpc<CreateOrderResponse, CreateOrderParams>(
+    // Fix: provide only params type, not return type as first generic parameter
+    const { data, error } = await supabase.rpc(
       'create_new_order', 
       { 
         user_id_param: userId,
@@ -53,7 +54,10 @@ export const placeOrder = async (
       throw new Error('No order was created');
     }
     
-    const orderId = (data as CreateOrderResponse).id;
+    // Cast the response data to our expected type and extract the ID
+    const responseData = data as unknown as CreateOrderResponse;
+    const orderId = responseData.id;
+    
     if (typeof orderId !== 'number') {
       throw new Error('Invalid order ID returned');
     }
