@@ -94,18 +94,22 @@ const Location: React.FC = () => {
       // Ensure we have a valid total amount
       const totalAmountValue = totalAmount || getTotalPrice();
       
-      // For debugging - log what we're sending to the payment page
+      // Format location data with all required fields
       const locationData = {
-        ...data,
-        totalAmount: totalAmountValue,
-        coordinates: currentCoordinates
+        address: data.address,
+        city: data.city,
+        pincode: data.pincode,
+        landmark: data.landmark || '',
+        instructions: data.instructions || '',
+        coordinates: currentCoordinates || null,
+        totalAmount: totalAmountValue
       };
       
       console.log("Sending to payment page - Location data:", locationData);
       console.log("Sending to payment page - Total amount:", totalAmountValue);
       console.log("Sending to payment page - Order ID:", orderId);
       
-      // Navigate to payment with location data and amount
+      // Navigate to payment with all required data
       navigate('/payment', { 
         state: { 
           orderId,
