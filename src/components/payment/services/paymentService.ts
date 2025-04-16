@@ -9,6 +9,13 @@ export const processOrderPayment = async (
   userId: string
 ): Promise<void> => {
   try {
+    // Log the data we're updating
+    console.log("Updating order with delivery details:", {
+      orderId,
+      locationData,
+      userId
+    });
+    
     const { error } = await supabase
       .from('orders')
       .update({ 
@@ -16,11 +23,13 @@ export const processOrderPayment = async (
         delivery_address: locationData.address,
         delivery_city: locationData.city,
         delivery_pincode: locationData.pincode,
-        delivery_instructions: locationData.instructions
+        delivery_instructions: locationData.instructions || '',
+        delivery_landmark: locationData.landmark || ''
       })
       .eq('id', orderId);
       
     if (error) {
+      console.error("Error in processOrderPayment:", error);
       throw error;
     }
     

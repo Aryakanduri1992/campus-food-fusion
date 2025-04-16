@@ -9,7 +9,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 
-// Import our new components
+// Import our components
 import LocationAddressForm, { LocationFormValues } from '@/components/location/LocationAddressForm';
 import OrderSummaryCard from '@/components/location/OrderSummaryCard';
 import LocationLoadingState from '@/components/location/LocationLoadingState';
@@ -49,7 +49,7 @@ const Location: React.FC = () => {
       city: '',
       instructions: '',
     },
-    mode: 'onChange', // Validate on change for better user experience
+    mode: 'onChange',
   });
 
   // Use our custom hook for geolocation
@@ -78,8 +78,7 @@ const Location: React.FC = () => {
 
   const fetchAddressFromCoordinates = async (lat: number, lng: number) => {
     try {
-      // Normally we would use Google Maps Geocoding API here
-      // For this demo, let's just set a mock address
+      // Mock address for demo
       form.setValue('address', `${lat.toFixed(6)}, ${lng.toFixed(6)}`);
       form.setValue('city', 'Sample City');
       form.setValue('pincode', '123456');
@@ -96,7 +95,13 @@ const Location: React.FC = () => {
       const totalAmountValue = totalAmount || getTotalPrice();
       
       // For debugging - log what we're sending to the payment page
-      console.log("Sending to payment page - Location data:", data);
+      const locationData = {
+        ...data,
+        totalAmount: totalAmountValue,
+        coordinates: currentCoordinates
+      };
+      
+      console.log("Sending to payment page - Location data:", locationData);
       console.log("Sending to payment page - Total amount:", totalAmountValue);
       console.log("Sending to payment page - Order ID:", orderId);
       
@@ -105,11 +110,7 @@ const Location: React.FC = () => {
         state: { 
           orderId,
           totalAmount: totalAmountValue,
-          locationData: {
-            ...data,
-            totalAmount: totalAmountValue,
-            coordinates: currentCoordinates
-          }
+          locationData
         } 
       });
     } catch (error) {
