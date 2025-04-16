@@ -96,8 +96,15 @@ export function usePaymentForm(orderId: string | number | null, locationData: Lo
         }
         
         // The data returned from the RPC is an object with an id property
+        // We need to ensure it's the correct type before assigning
         if (typeof data === 'object' && data !== null && 'id' in data) {
-          orderIdToUse = data.id;
+          const orderId = data.id;
+          // Make sure orderId is a string or number
+          if (typeof orderId === 'string' || typeof orderId === 'number') {
+            orderIdToUse = orderId;
+          } else {
+            throw new Error('Invalid order ID type from create_new_order');
+          }
         } else {
           throw new Error('Invalid response from create_new_order');
         }
