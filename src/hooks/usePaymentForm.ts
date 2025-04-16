@@ -9,6 +9,7 @@ export interface LocationData {
   address: string;
   city: string;
   pincode: string;
+  landmark?: string;
   instructions?: string;
   totalAmount?: number;
   coordinates?: { lat: number, lng: number };
@@ -39,6 +40,12 @@ export function usePaymentForm(orderId: string | number | null, locationData: Lo
   });
 
   const { cart, clearCart } = useCart();
+
+  // For debugging
+  useEffect(() => {
+    console.log("Payment form - Location data:", locationData);
+    console.log("Payment form - Order ID:", orderId);
+  }, [locationData, orderId]);
 
   const setPaymentMethod = (value: 'card' | 'upi') => {
     setState(prev => ({ ...prev, paymentMethod: value }));
@@ -94,10 +101,17 @@ export function usePaymentForm(orderId: string | number | null, locationData: Lo
       return;
     }
     
+    // Check if location data is available
+    if (!locationData) {
+      toast.error("Delivery information is missing. Please enter your delivery details.");
+      navigate('/location');
+      return;
+    }
+    
     setState(prev => ({ ...prev, processingPayment: true, progressValue: 0 }));
     
     try {
-      // After successful payment processing, create the order in the database
+      // Get user data
       const { data: userData } = await supabase.auth.getUser();
       if (!userData?.user) {
         throw new Error('User not authenticated');
@@ -184,7 +198,13 @@ export function usePaymentForm(orderId: string | number | null, locationData: Lo
         }
       };
 
+      // Get the total amount from location data or fallback to calculation
       const totalAmount = locationData?.totalAmount || 0;
+      
+      if (!totalAmount) {
+        throw new Error('Order amount is missing');
+      }
+      
       const orderIdFinal = await finalizeOrder(userData.user.id, cart, null, totalAmount);
       console.log("Order finalized with ID:", orderIdFinal);
       

@@ -69,11 +69,11 @@ const Location: React.FC = () => {
 
   useEffect(() => {
     // Check if we have an order ID from state, if not and cart is empty, redirect
-    if (!cartLoading && cart.length === 0 && !orderId) {
+    if (!cartLoading && cart.length === 0 && !orderId && !totalAmount) {
       toast.error('Your cart is empty');
       navigate('/cart');
     }
-  }, [cart, orderId, navigate, cartLoading]);
+  }, [cart, orderId, navigate, cartLoading, totalAmount]);
 
   const fetchAddressFromCoordinates = async (lat: number, lng: number) => {
     try {
@@ -94,25 +94,22 @@ const Location: React.FC = () => {
     setTimeout(() => {
       setLoading(false);
       
-      // Always ensure orderId is passed to payment page
-      if (!orderId && !totalAmount) {
-        toast.error("Order information is missing. Please try again.");
-        navigate('/cart');
-        return;
-      }
+      // Always ensure required data is passed to payment page
+      const totalAmountValue = totalAmount || getTotalPrice();
       
       // Navigate to payment with both order and location data
       navigate('/payment', { 
         state: { 
           orderId: orderId,
-          totalAmount: totalAmount,
+          totalAmount: totalAmountValue,
           locationData: {
             ...data,
+            totalAmount: totalAmountValue,
             coordinates: currentCoordinates
           }
         } 
       });
-    }, 1000);
+    }, 500);
   };
 
   // Show loading state while cart is being fetched
@@ -121,7 +118,7 @@ const Location: React.FC = () => {
   }
 
   // Fallback if no orderId and cart is empty
-  if (cart.length === 0 && !orderId) {
+  if (cart.length === 0 && !orderId && !totalAmount) {
     return <LocationEmptyCart />;
   }
 

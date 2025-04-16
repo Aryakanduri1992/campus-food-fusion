@@ -41,14 +41,26 @@ const LocationAddressForm: React.FC<LocationAddressFormProps> = ({
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
         <Button 
-          onClick={detectCurrentLocation} 
+          onClick={(e) => {
+            e.preventDefault();
+            detectCurrentLocation();
+          }} 
           type="button" 
           className="w-full mb-6"
           variant="outline"
           disabled={usingCurrentLocation}
         >
-          {usingCurrentLocation ? 'Detecting Location...' : 'Use Current Location'}
-          <MapPin className="ml-2 h-4 w-4" />
+          {usingCurrentLocation ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Detecting Location...
+            </>
+          ) : (
+            <>
+              Use Current Location
+              <MapPin className="ml-2 h-4 w-4" />
+            </>
+          )}
         </Button>
         
         <FormField
@@ -126,7 +138,7 @@ const LocationAddressForm: React.FC<LocationAddressFormProps> = ({
         <Button 
           type="submit"
           className="w-full bg-rv-navy hover:bg-rv-burgundy"
-          disabled={loading}
+          disabled={loading || usingCurrentLocation}
         >
           {loading ? (
             <>

@@ -54,18 +54,20 @@ const Payment = () => {
   }, [fetchCart]);
 
   useEffect(() => {
-    if (!isLoading && cart.length === 0 && !orderId) {
-      toast("Your cart is empty. Please add items before proceeding to payment.");
+    // Check for empty cart
+    if (!isLoading && cart.length === 0 && !orderId && !totalAmount) {
+      toast.error("Your cart is empty. Please add items before proceeding to payment.");
       navigate('/cart');
+      return;
     }
-  }, [cart, navigate, isLoading, orderId]);
-
-  useEffect(() => {
+    
+    // Check for location data
     if (!isLoading && !locationData && !orderId) {
-      toast("Please enter your delivery details first.");
+      toast.error("Please enter your delivery details first.");
       navigate('/location');
+      return;
     }
-  }, [locationData, navigate, isLoading, orderId]);
+  }, [locationData, navigate, isLoading, orderId, cart.length, totalAmount]);
 
   if (isLoading) {
     return <PaymentLoading />;
