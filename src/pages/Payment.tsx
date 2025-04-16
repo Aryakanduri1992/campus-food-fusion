@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useCart } from '@/context/CartContext';
@@ -70,15 +69,8 @@ const Payment = () => {
   }, [fetchCart]);
 
   useEffect(() => {
-    // Only redirect if we've loaded and aren't in payment process or success state
+    // Only check for cart emptiness when not in payment process
     if (!isLoading && !processingPayment && !showDeliveryInfo) {
-      // Check for location data first
-      if (!locationData) {
-        toast.error("Please enter your delivery details first");
-        navigate('/location', { replace: true });
-        return;
-      }
-      
       // Validate total amount
       if (!totalAmount || totalAmount <= 0) {
         toast.error("Invalid order amount");
@@ -93,7 +85,7 @@ const Payment = () => {
         return;
       }
     }
-  }, [locationData, navigate, isLoading, orderId, cart.length, totalAmount, processingPayment, showDeliveryInfo]);
+  }, [navigate, isLoading, orderId, cart.length, totalAmount, processingPayment, showDeliveryInfo]);
 
   if (isLoading) {
     return <PaymentLoading />;
