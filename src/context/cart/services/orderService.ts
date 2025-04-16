@@ -14,6 +14,13 @@ interface CreateOrderResponse {
   created_at: string;
 }
 
+// Define the type for our RPC function parameters
+interface CreateOrderParams {
+  user_id_param: string;
+  total_price_param: number;
+  items_json: string;
+}
+
 export const placeOrder = async (
   userId: string, 
   cart: CartItem[], 
@@ -37,14 +44,14 @@ export const placeOrder = async (
       quantity: item.quantity
     }));
     
-    // Call the new create_new_order function with items included
-    const { data, error } = await supabase.rpc(
+    // Call the updated create_new_order function with items included
+    const { data, error } = await supabase.rpc<CreateOrderResponse>(
       'create_new_order', 
       { 
         user_id_param: userId,
         total_price_param: totalPrice,
         items_json: JSON.stringify(orderItemsJson)
-      }
+      } as CreateOrderParams
     );
       
     if (error) {
@@ -57,8 +64,7 @@ export const placeOrder = async (
       throw new Error('No order was created');
     }
     
-    const orderData = data as CreateOrderResponse;
-    console.log('Order created successfully:', orderData);
+    console.log('Order created successfully:', data);
     
     // Clear the cart after successful order creation
     if (cartId) {
@@ -73,7 +79,7 @@ export const placeOrder = async (
     }
     clearCartFromLocalStorage();
     
-    return orderData.id;
+    return data.id;
   } catch (error) {
     console.error('Error placing order:', error);
     throw error;
