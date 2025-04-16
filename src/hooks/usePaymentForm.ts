@@ -1,8 +1,8 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from "sonner";
 import { useNavigate } from 'react-router-dom';
+import { useCart } from '@/context/CartContext';
 
 export interface LocationData {
   address: string;
@@ -34,6 +34,8 @@ export function usePaymentForm(orderId: string | number | null, locationData: Lo
     progressValue: 0,
     showDeliveryInfo: false,
   });
+
+  const { cart, clearCart, state: cartState } = useCart();
 
   const setPaymentMethod = (value: 'card' | 'upi') => {
     setState(prev => ({ ...prev, paymentMethod: value }));
@@ -92,7 +94,96 @@ export function usePaymentForm(orderId: string | number | null, locationData: Lo
     setState(prev => ({ ...prev, processingPayment: true, progressValue: 0 }));
     
     try {
-      console.log("Processing payment for order:", orderId);
+      // After successful payment processing, create the order in the database
+      const { user } = await supabase.auth.getUser();
+      if (!user?.user) {
+        throw new Error('User not authenticated');
+      }
+
+      const finalizeOrder = async (
+        userId: string,
+        cartItems: any[],
+        cartId: string | null,
+        totalAmount: number
+      ): Promise<number> => {
+        try {
+          // Call the create_new_order RPC function
+          const { data, error } = await supabase.rpc(
+            'create_new_order',
+            {
+              user_id_param: userId,
+              total_price_param: totalAmount
+            }
+          );
+      
+          if (error) {
+            console.error('Order creation error:', error);
+            throw new Error(error.message || 'Failed to create order');
+          }
+      
+          // Ensure we have a valid order ID
+          if (!data) {
+            throw new Error('No order was created');
+          }
+      
+          // Properly convert data to the expected type using a two-step type assertion
+          const responseData = data as unknown as { id: number };
+          const orderId = responseData.id;
+      
+          if (typeof orderId !== 'number') {
+            throw new Error('Invalid order ID returned');
+          }
+      
+          // Create order items after order is created
+          try {
+            const { error: itemsError } = await supabase.rpc(
+              'create_order_items' as any,
+              {
+                order_id_param: orderId,
+                items_json: JSON.stringify(cartItems.map(item => ({
+                  food_item_id: item.foodItem.id,
+                  food_name: item.foodItem.name,
+                  food_price: item.foodItem.price,
+                  food_image_url: item.foodItem.imageUrl,
+                  quantity: item.quantity
+                })))
+              }
+            );
+      
+            if (itemsError) {
+              console.error('Error creating order items:', itemsError);
+              throw new Error('Failed to add items to order: ' + itemsError.message);
+            }
+          } catch (itemsError) {
+            console.error('Error creating order items:', itemsError);
+            throw new Error('Failed to add items to order');
+          }
+          
+          console.log('Order created successfully:', data);
+          
+          // Clear the cart after successful order creation
+          if (cartId) {
+            const { error: cartError } = await supabase
+              .from('cart_items')
+              .delete()
+              .eq('cart_id', cartId);
+              
+            if (cartError) {
+              console.error('Error clearing cart:', cartError);
+            }
+          }
+          clearCart();
+          
+          return orderId;
+        } catch (error) {
+          console.error('Error placing order:', error);
+          throw error;
+        }
+      };
+
+      const orderIdFinal = await finalizeOrder(user.user.id, cart, cartState.cartId, Number(locationData?.totalAmount));
+      console.log("Order finalized with ID:", orderIdFinal);
+      
     } catch (error) {
       setState(prev => ({ ...prev, processingPayment: false, progressValue: 0 }));
       console.error("Payment error:", error);

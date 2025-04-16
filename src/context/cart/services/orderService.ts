@@ -24,46 +24,55 @@ export const placeOrder = async (
   userId: string, 
   cart: CartItem[], 
   cartId: string | null
-): Promise<number | null> => {
+): Promise<{ totalPrice: number }> => {
   if (cart.length === 0) {
     throw new Error('Your cart is empty');
   }
   
+  // Calculate total price but don't create order yet
+  const totalPrice = cart.reduce((total, item) => {
+    return total + (item.foodItem.price * item.quantity);
+  }, 0);
+  
+  return { totalPrice };
+};
+
+export const finalizeOrder = async (
+  userId: string,
+  cart: CartItem[],
+  cartId: string | null,
+  totalPrice: number
+): Promise<number> => {
   try {
-    const totalPrice = cart.reduce((total, item) => {
-      return total + (item.foodItem.price * item.quantity);
-    }, 0);
-    
     // Call the create_new_order RPC function
     const { data, error } = await supabase.rpc(
-      'create_new_order', 
-      { 
+      'create_new_order',
+      {
         user_id_param: userId,
         total_price_param: totalPrice
       }
     );
-      
+
     if (error) {
       console.error('Order creation error:', error);
       throw new Error(error.message || 'Failed to create order');
     }
-    
+
     // Ensure we have a valid order ID
     if (!data) {
       throw new Error('No order was created');
     }
-    
+
     // Properly convert data to the expected type using a two-step type assertion
     const responseData = data as unknown as CreateOrderResponse;
     const orderId = responseData.id;
-    
+
     if (typeof orderId !== 'number') {
       throw new Error('Invalid order ID returned');
     }
 
     // Create order items after order is created
     try {
-      // Use another RPC function to bypass RLS for order items
       const { error: itemsError } = await supabase.rpc(
         'create_order_items' as any,
         {

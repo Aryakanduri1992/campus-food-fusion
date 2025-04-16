@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useCart } from '@/context/CartContext';
 import { useNavigate } from 'react-router-dom';
@@ -19,19 +18,16 @@ const Cart: React.FC = () => {
   const [placingOrder, setPlacingOrder] = useState(false);
   const [orderError, setOrderError] = useState<string | null>(null);
 
-  // Fetch cart data when component mounts
   useEffect(() => {
     const loadCart = async () => {
       setIsLoading(true);
       try {
         await fetchCart();
         setCartLoaded(true);
-        // Clear any previous errors
         setOrderError(null);
       } catch (error) {
         console.error('Error fetching cart:', error);
         if (retryCount < 3) {
-          // Retry fetching cart up to 3 times
           setRetryCount(prev => prev + 1);
         } else {
           toast.error('Failed to load your cart items');
@@ -44,7 +40,6 @@ const Cart: React.FC = () => {
     loadCart();
   }, [fetchCart, retryCount]);
 
-  // Add a second useEffect to track when cart is loaded
   useEffect(() => {
     if (cart.length > 0) {
       setCartLoaded(true);
@@ -62,35 +57,26 @@ const Cart: React.FC = () => {
     setOrderError(null);
     
     try {
-      // Place the order first to get the order ID
-      const orderId = await placeOrder();
+      const { totalPrice } = await placeOrder(user.id, cart, state.cartId);
       
-      if (orderId) {
-        // Navigate to location page with order ID
-        navigate('/location', { 
-          state: { 
-            totalAmount: getTotalPrice(),
-            orderId
-          } 
-        });
-      } else {
-        throw new Error("Failed to create order");
-      }
+      navigate('/location', { 
+        state: { 
+          totalAmount: totalPrice
+        } 
+      });
     } catch (error) {
-      console.error("Error placing order:", error);
-      setOrderError(error instanceof Error ? error.message : "An error occurred while placing your order. Please try again.");
-      toast.error("An error occurred while placing your order. Please try again.");
+      console.error("Error processing order:", error);
+      setOrderError(error instanceof Error ? error.message : "An error occurred while processing your order. Please try again.");
+      toast.error("An error occurred while processing your order. Please try again.");
     } finally {
       setPlacingOrder(false);
     }
   };
 
-  // Show loading state with skeletons
   if (isLoading && !cartLoaded) {
     return <CartLoadingState />;
   }
 
-  // Show empty cart state
   if (!isLoading && cart.length === 0) {
     return <EmptyCart />;
   }
