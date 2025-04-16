@@ -19,7 +19,8 @@ export const placeOrder = async (
       return total + (item.foodItem.price * item.quantity);
     }, 0);
     
-    // Create the order record directly without referencing the users table
+    // Create the order record directly with the user_id
+    // Important: No reference to the users table, avoiding RLS issues
     const { data: newOrder, error } = await supabase
       .from('orders')
       .insert({
