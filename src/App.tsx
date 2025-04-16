@@ -36,7 +36,7 @@ const AppRoutes = () => {
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
-      <BrowserRouter>
+      <BrowserRouter basename="/campus-food-fusion">
         <AuthProvider>
           <CartProvider>
             <Toaster />
