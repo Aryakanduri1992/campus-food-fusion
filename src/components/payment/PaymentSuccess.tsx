@@ -36,10 +36,10 @@ const PaymentSuccess: React.FC<PaymentSuccessProps> = ({ deliveryPerson }) => {
         </div>
         <p className="text-sm text-gray-600 text-center">You will receive updates about your order status.</p>
       </CardContent>
-      <CardFooter>
+      <CardFooter className="flex flex-col gap-4">
         <Button 
           className="w-full bg-rv-burgundy hover:bg-rv-burgundy/90"
-          onClick={() => navigate('/orders')}
+          onClick={() => navigate('/customer/orders')}
         >
           View Order Details
         </Button>
