@@ -3,7 +3,7 @@ import { CartItem } from '../types';
 import { supabase } from '@/integrations/supabase/client';
 import { 
   clearCartFromLocalStorage
-} from './cartStorageService';
+} from './services/cartStorageService';
 
 // Define the parameters for the create_new_order RPC function
 interface CreateOrderParams {
@@ -34,8 +34,7 @@ export const placeOrder = async (
       return total + (item.foodItem.price * item.quantity);
     }, 0);
     
-    // Call the create_new_order function with proper typing
-    // Fix: provide only params type, not return type as first generic parameter
+    // Call the create_new_order RPC function
     const { data, error } = await supabase.rpc(
       'create_new_order', 
       { 
@@ -64,22 +63,24 @@ export const placeOrder = async (
 
     // Create order items after order is created
     try {
-      const orderItems = cart.map(item => ({
-        order_id: orderId,
-        food_item_id: item.foodItem.id,
-        food_name: item.foodItem.name,
-        food_price: item.foodItem.price,
-        food_image_url: item.foodItem.imageUrl,
-        quantity: item.quantity
-      }));
-
-      const { error: itemsError } = await supabase
-        .from('order_items')
-        .insert(orderItems);
+      // Use another RPC function to bypass RLS for order items
+      const { error: itemsError } = await supabase.rpc(
+        'create_order_items',
+        {
+          order_id_param: orderId,
+          items_json: JSON.stringify(cart.map(item => ({
+            food_item_id: item.foodItem.id,
+            food_name: item.foodItem.name,
+            food_price: item.foodItem.price,
+            food_image_url: item.foodItem.imageUrl,
+            quantity: item.quantity
+          })))
+        }
+      );
 
       if (itemsError) {
         console.error('Error creating order items:', itemsError);
-        throw new Error('Failed to add items to order');
+        throw new Error('Failed to add items to order: ' + itemsError.message);
       }
     } catch (itemsError) {
       console.error('Error creating order items:', itemsError);
