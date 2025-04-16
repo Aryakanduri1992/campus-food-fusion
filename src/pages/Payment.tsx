@@ -61,20 +61,23 @@ const Payment = () => {
   }, [fetchCart]);
 
   useEffect(() => {
-    // Check if location data exists and is valid
-    if (!isLoading && !locationData) {
-      toast.error("Please enter your delivery details first");
-      navigate('/location');
-      return;
+    // Only redirect if we've finished loading AND we're not already in the process of checking out
+    if (!isLoading) {
+      // Check for location data first - this is the most important check
+      if (!locationData && !processingPayment && !showDeliveryInfo) {
+        toast.error("Please enter your delivery details first");
+        navigate('/location');
+        return;
+      }
+      
+      // Then check for empty cart when not in order flow
+      if (cart.length === 0 && !orderId && !totalAmount && !processingPayment && !showDeliveryInfo) {
+        toast.error("Your cart is empty. Please add items before proceeding to payment.");
+        navigate('/cart');
+        return;
+      }
     }
-    
-    // Check for empty cart when not in order flow
-    if (!isLoading && cart.length === 0 && !orderId && !totalAmount) {
-      toast.error("Your cart is empty. Please add items before proceeding to payment.");
-      navigate('/cart');
-      return;
-    }
-  }, [locationData, navigate, isLoading, orderId, cart.length, totalAmount]);
+  }, [locationData, navigate, isLoading, orderId, cart.length, totalAmount, processingPayment, showDeliveryInfo]);
 
   if (isLoading) {
     return <PaymentLoading />;
