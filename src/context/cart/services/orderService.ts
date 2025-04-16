@@ -35,7 +35,7 @@ export const placeOrder = async (
     }, 0);
     
     // Call the create_new_order RPC function with proper type parameters
-    const { data, error } = await supabase.rpc<CreateOrderResponse, CreateOrderParams>(
+    const { data, error } = await supabase.rpc(
       'create_new_order', 
       { 
         user_id_param: userId,
@@ -53,7 +53,7 @@ export const placeOrder = async (
       throw new Error('No order was created');
     }
     
-    const orderId = data.id;
+    const orderId = (data as CreateOrderResponse).id;
     
     if (typeof orderId !== 'number') {
       throw new Error('Invalid order ID returned');
