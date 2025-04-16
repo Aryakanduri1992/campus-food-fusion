@@ -34,7 +34,7 @@ export const placeOrder = async (
       return total + (item.foodItem.price * item.quantity);
     }, 0);
     
-    // Call the create_new_order RPC function with proper type parameters
+    // Call the create_new_order RPC function
     const { data, error } = await supabase.rpc(
       'create_new_order', 
       { 
@@ -53,7 +53,9 @@ export const placeOrder = async (
       throw new Error('No order was created');
     }
     
-    const orderId = (data as CreateOrderResponse).id;
+    // Properly convert data to the expected type using a two-step type assertion
+    const responseData = data as unknown as CreateOrderResponse;
+    const orderId = responseData.id;
     
     if (typeof orderId !== 'number') {
       throw new Error('Invalid order ID returned');
