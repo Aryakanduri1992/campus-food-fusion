@@ -1,30 +1,12 @@
 
 import { useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { toast } from "sonner";
 import { useNavigate } from 'react-router-dom';
 import { useCart } from '@/context/CartContext';
-
-export interface LocationData {
-  address: string;
-  city: string;
-  pincode: string;
-  landmark?: string;
-  instructions?: string;
-  totalAmount?: number;
-  coordinates?: { lat: number, lng: number };
-}
-
-export interface PaymentFormState {
-  paymentMethod: 'card' | 'upi';
-  cardNumber: string;
-  expiryDate: string;
-  cvv: string;
-  nameOnCard: string;
-  processingPayment: boolean;
-  progressValue: number;
-  showDeliveryInfo: boolean;
-}
+import { toast } from "sonner";
+import { supabase } from '@/integrations/supabase/client';
+import { formatCardNumber, formatExpiryDate, validatePaymentFields } from '@/components/payment/utils/paymentValidation';
+import { processOrderPayment } from '@/components/payment/services/paymentService';
+import { LocationData, PaymentFormState } from '@/components/payment/types/payment';
 
 export function usePaymentForm(orderId: string | number | null, locationData: LocationData | undefined) {
   const navigate = useNavigate();
@@ -41,7 +23,7 @@ export function usePaymentForm(orderId: string | number | null, locationData: Lo
 
   const { cart, clearCart } = useCart();
 
-  // For debugging
+  // Debug logging
   useEffect(() => {
     console.log("Payment form - Location data:", locationData);
     console.log("Payment form - Order ID:", orderId);
@@ -59,49 +41,27 @@ export function usePaymentForm(orderId: string | number | null, locationData: Lo
     setState(prev => ({ ...prev, cvv: value }));
   };
 
-  const formatCardNumber = (value: string) => {
-    const val = value.replace(/\s+/g, '').replace(/[^0-9]/gi, '');
-    const matches = val.match(/\d{4,16}/g);
-    const match = matches && matches[0] || '';
-    const parts = [];
-    
-    for (let i = 0, len = match.length; i < len; i += 4) {
-      parts.push(match.substring(i, i + 4));
-    }
-    
-    if (parts.length) {
-      return parts.join(' ');
-    } else {
-      return value;
-    }
-  };
-
   const handleCardNumberChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const value = event.target.value;
-    setState(prev => ({ ...prev, cardNumber: formatCardNumber(value) }));
+    const value = formatCardNumber(event.target.value);
+    setState(prev => ({ ...prev, cardNumber: value }));
   };
 
   const handleExpiryDateChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const value = event.target.value.replace(/\D/g, '');
-    if (value.length <= 4) {
-      const month = value.substring(0, 2);
-      const year = value.substring(2, 4);
-      
-      if (value.length <= 2) {
-        setState(prev => ({ ...prev, expiryDate: value }));
-      } else {
-        setState(prev => ({ ...prev, expiryDate: `${month}/${year}` }));
-      }
-    }
+    const value = formatExpiryDate(event.target.value);
+    setState(prev => ({ ...prev, expiryDate: value }));
   };
 
   const handlePayment = async () => {
-    if (state.paymentMethod === 'card' && (!state.cardNumber || !state.expiryDate || !state.cvv || !state.nameOnCard)) {
+    if (!validatePaymentFields(state.paymentMethod, {
+      cardNumber: state.cardNumber,
+      expiryDate: state.expiryDate,
+      cvv: state.cvv,
+      nameOnCard: state.nameOnCard
+    })) {
       toast.error("Please fill in all card details");
       return;
     }
     
-    // Check if location data is available
     if (!locationData) {
       toast.error("Delivery information is missing. Please enter your delivery details.");
       navigate('/location');
@@ -111,102 +71,31 @@ export function usePaymentForm(orderId: string | number | null, locationData: Lo
     setState(prev => ({ ...prev, processingPayment: true, progressValue: 0 }));
     
     try {
-      // Get user data
       const { data: userData } = await supabase.auth.getUser();
       if (!userData?.user) {
         throw new Error('User not authenticated');
       }
 
-      const finalizeOrder = async (
-        userId: string,
-        cartItems: any[],
-        cartId: string | null,
-        totalAmount: number
-      ): Promise<number> => {
-        try {
-          // Call the create_new_order RPC function
-          const { data, error } = await supabase.rpc(
-            'create_new_order',
-            {
-              user_id_param: userId,
-              total_price_param: totalAmount
-            }
-          );
-      
-          if (error) {
-            console.error('Order creation error:', error);
-            throw new Error(error.message || 'Failed to create order');
-          }
-      
-          // Ensure we have a valid order ID
-          if (!data) {
-            throw new Error('No order was created');
-          }
-      
-          // Properly convert data to the expected type using a two-step type assertion
-          const responseData = data as unknown as { id: number };
-          const orderId = responseData.id;
-      
-          if (typeof orderId !== 'number') {
-            throw new Error('Invalid order ID returned');
-          }
-      
-          // Create order items after order is created
-          try {
-            const { error: itemsError } = await supabase.rpc(
-              'create_order_items' as any,
-              {
-                order_id_param: orderId,
-                items_json: JSON.stringify(cartItems.map(item => ({
-                  food_item_id: item.foodItem.id,
-                  food_name: item.foodItem.name,
-                  food_price: item.foodItem.price,
-                  food_image_url: item.foodItem.imageUrl,
-                  quantity: item.quantity
-                })))
-              }
-            );
-      
-            if (itemsError) {
-              console.error('Error creating order items:', itemsError);
-              throw new Error('Failed to add items to order: ' + itemsError.message);
-            }
-          } catch (itemsError) {
-            console.error('Error creating order items:', itemsError);
-            throw new Error('Failed to add items to order');
-          }
-          
-          console.log('Order created successfully:', data);
-          
-          // Clear the cart after successful order creation
-          if (cartId) {
-            const { error: cartError } = await supabase
-              .from('cart_items')
-              .delete()
-              .eq('cart_id', cartId);
-              
-            if (cartError) {
-              console.error('Error clearing cart:', cartError);
-            }
-          }
-          clearCart();
-          
-          return orderId;
-        } catch (error) {
-          console.error('Error placing order:', error);
-          throw error;
+      const { data, error } = await supabase.rpc(
+        'create_new_order',
+        {
+          user_id_param: userData.user.id,
+          total_price_param: locationData.totalAmount || 0
         }
-      };
+      );
 
-      // Get the total amount from location data or fallback to calculation
-      const totalAmount = locationData?.totalAmount || 0;
+      if (error || !data) {
+        throw new Error(error?.message || 'Failed to create order');
+      }
+
+      const orderIdNumber = typeof orderId === 'string' ? parseInt(orderId, 10) : orderId;
       
-      if (!totalAmount) {
-        throw new Error('Order amount is missing');
+      if (orderIdNumber && !isNaN(Number(orderIdNumber))) {
+        await processOrderPayment(Number(orderIdNumber), locationData, userData.user.id);
       }
       
-      const orderIdFinal = await finalizeOrder(userData.user.id, cart, null, totalAmount);
-      console.log("Order finalized with ID:", orderIdFinal);
+      setState(prev => ({ ...prev, showDeliveryInfo: true }));
+      clearCart();
       
     } catch (error) {
       setState(prev => ({ ...prev, processingPayment: false, progressValue: 0 }));
@@ -215,6 +104,7 @@ export function usePaymentForm(orderId: string | number | null, locationData: Lo
     }
   };
 
+  // Handle payment processing animation
   useEffect(() => {
     if (state.processingPayment) {
       const interval = setInterval(() => {
@@ -232,48 +122,20 @@ export function usePaymentForm(orderId: string | number | null, locationData: Lo
     }
   }, [state.processingPayment]);
 
+  // Handle payment completion
   useEffect(() => {
     if (state.progressValue === 100 && state.processingPayment) {
-      const timer = setTimeout(async () => {
-        try {
-          if (orderId) {
-            // Convert orderId to a number and validate it
-            const orderIdNumber = typeof orderId === 'string' ? parseInt(orderId, 10) : orderId;
-            
-            if (isNaN(Number(orderIdNumber))) {
-              throw new Error('Invalid order ID');
-            }
-            
-            const { error } = await supabase
-              .from('orders')
-              .update({ 
-                status: 'Processing',
-                delivery_address: locationData?.address,
-                delivery_city: locationData?.city,
-                delivery_pincode: locationData?.pincode,
-                delivery_instructions: locationData?.instructions
-              })
-              .eq('id', Number(orderIdNumber));
-              
-            if (error) {
-              throw error;
-            }
-            
-            console.log("Order status updated to Processing with delivery details");
-          }
-          
-          setState(prev => ({ ...prev, processingPayment: false, showDeliveryInfo: true }));
-          toast.success("Payment successful!");
-        } catch (error) {
-          console.error("Error updating order status:", error);
-          toast.error("Payment processed, but there was an issue updating your order status.");
-          setState(prev => ({ ...prev, processingPayment: false, showDeliveryInfo: true }));
-        }
+      const timer = setTimeout(() => {
+        setState(prev => ({ 
+          ...prev, 
+          processingPayment: false,
+          showDeliveryInfo: true 
+        }));
       }, 500);
       
       return () => clearTimeout(timer);
     }
-  }, [state.progressValue, state.processingPayment, orderId, locationData]);
+  }, [state.progressValue, state.processingPayment]);
 
   return {
     ...state,
