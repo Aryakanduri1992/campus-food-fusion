@@ -14,13 +14,6 @@ interface CreateOrderResponse {
   created_at: string;
 }
 
-// Define the type for our RPC function parameters
-interface CreateOrderParams {
-  user_id_param: string;
-  total_price_param: number;
-  items_json: string;
-}
-
 export const placeOrder = async (
   userId: string, 
   cart: CartItem[], 
@@ -35,22 +28,12 @@ export const placeOrder = async (
       return total + (item.foodItem.price * item.quantity);
     }, 0);
     
-    // Format order items for the database function
-    const orderItemsJson = cart.map(item => ({
-      food_item_id: item.foodItem.id,
-      food_name: item.foodItem.name,
-      food_price: item.foodItem.price,
-      food_image_url: item.foodItem.imageUrl,
-      quantity: item.quantity
-    }));
-    
-    // Call the updated create_new_order function with items included
-    const { data, error } = await supabase.rpc<CreateOrderResponse, CreateOrderParams>(
+    // Call the create_new_order function
+    const { data, error } = await supabase.rpc<CreateOrderResponse>(
       'create_new_order', 
       { 
         user_id_param: userId,
-        total_price_param: totalPrice,
-        items_json: JSON.stringify(orderItemsJson)
+        total_price_param: totalPrice
       }
     );
       
@@ -59,9 +42,33 @@ export const placeOrder = async (
       throw new Error(error.message || 'Failed to create order');
     }
     
-    // Ensure we have a valid order with an ID
+    // Ensure we have a valid order ID
     if (!data || typeof data.id !== 'number') {
       throw new Error('No order was created');
+    }
+
+    // Create order items after order is created
+    try {
+      const orderItems = cart.map(item => ({
+        order_id: data.id,
+        food_item_id: item.foodItem.id,
+        food_name: item.foodItem.name,
+        food_price: item.foodItem.price,
+        food_image_url: item.foodItem.imageUrl,
+        quantity: item.quantity
+      }));
+
+      const { error: itemsError } = await supabase
+        .from('order_items')
+        .insert(orderItems);
+
+      if (itemsError) {
+        console.error('Error creating order items:', itemsError);
+        throw new Error('Failed to add items to order');
+      }
+    } catch (itemsError) {
+      console.error('Error creating order items:', itemsError);
+      throw new Error('Failed to add items to order');
     }
     
     console.log('Order created successfully:', data);
