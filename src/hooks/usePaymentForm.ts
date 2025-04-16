@@ -95,7 +95,12 @@ export function usePaymentForm(orderId: string | number | null, locationData: Lo
           throw new Error(error?.message || 'Failed to create order');
         }
         
-        orderIdToUse = data.id;
+        // The data returned from the RPC is an object with an id property
+        if (typeof data === 'object' && data !== null && 'id' in data) {
+          orderIdToUse = data.id;
+        } else {
+          throw new Error('Invalid response from create_new_order');
+        }
       }
       
       // Process the payment and update order status
