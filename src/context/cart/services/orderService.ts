@@ -28,31 +28,30 @@ export const placeOrder = async (
       return total + (item.foodItem.price * item.quantity);
     }, 0);
     
-    // The TypeScript definition in supabase-js doesn't include our custom functions
-    // so we need to use a more generic approach
+    // TypeScript doesn't recognize our custom RPC function, so we need to use type assertions
     const { data, error } = await supabase
       .rpc('create_new_order', { 
         user_id_param: userId,
         total_price_param: totalPrice
-      });
+      }) as unknown as { 
+        data: CreateOrderResponse | null; 
+        error: any 
+      };
       
     if (error) {
       console.error('Order creation error:', error);
       throw new Error(error.message || 'Failed to create order');
     }
     
-    // Cast the response to our expected type
-    const newOrder = data as CreateOrderResponse;
-    
-    if (!newOrder || !newOrder.id) {
+    if (!data || !data.id) {
       throw new Error('No order was created');
     }
     
-    console.log('Order created successfully:', newOrder);
+    console.log('Order created successfully:', data);
     
     // Now create the order items
     const orderItems = cart.map(item => ({
-      order_id: newOrder.id,
+      order_id: data.id,
       food_item_id: item.foodItem.id,
       food_name: item.foodItem.name,
       food_price: item.foodItem.price,
@@ -82,7 +81,7 @@ export const placeOrder = async (
     }
     clearCartFromLocalStorage();
     
-    return newOrder.id;
+    return data.id;
   } catch (error) {
     console.error('Error placing order:', error);
     throw error;
