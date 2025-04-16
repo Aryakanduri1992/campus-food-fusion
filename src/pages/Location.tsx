@@ -48,7 +48,8 @@ const Location: React.FC = () => {
       pincode: '',
       city: '',
       instructions: '',
-    }
+    },
+    mode: 'onChange', // Validate on change for better user experience
   });
 
   // Use our custom hook for geolocation
@@ -90,17 +91,19 @@ const Location: React.FC = () => {
   const onSubmit = (data: LocationFormValues) => {
     setLoading(true);
     
-    // Process the form data
-    setTimeout(() => {
-      setLoading(false);
-      
-      // Always ensure required data is passed to payment page
+    try {
+      // Ensure we have a valid total amount
       const totalAmountValue = totalAmount || getTotalPrice();
       
-      // Navigate to payment with both order and location data
+      // For debugging - log what we're sending to the payment page
+      console.log("Sending to payment page - Location data:", data);
+      console.log("Sending to payment page - Total amount:", totalAmountValue);
+      console.log("Sending to payment page - Order ID:", orderId);
+      
+      // Navigate to payment with location data and amount
       navigate('/payment', { 
         state: { 
-          orderId: orderId,
+          orderId,
           totalAmount: totalAmountValue,
           locationData: {
             ...data,
@@ -109,7 +112,11 @@ const Location: React.FC = () => {
           }
         } 
       });
-    }, 500);
+    } catch (error) {
+      console.error("Error navigating to payment:", error);
+      toast.error("Failed to proceed to payment");
+      setLoading(false);
+    }
   };
 
   // Show loading state while cart is being fetched

@@ -37,9 +37,15 @@ const LocationAddressForm: React.FC<LocationAddressFormProps> = ({
 }) => {
   const navigate = useNavigate();
 
+  // Helper function to handle form submission
+  const handleFormSubmit = (data: LocationFormValues) => {
+    console.log("Form submitted with data:", data);
+    onSubmit(data);
+  };
+
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+      <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-4">
         <Button 
           onClick={(e) => {
             e.preventDefault();

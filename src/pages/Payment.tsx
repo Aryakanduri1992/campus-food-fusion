@@ -16,9 +16,15 @@ const Payment = () => {
   const [isLoading, setIsLoading] = useState(true);
   const { user } = useAuth();
   
+  // Extract location state data
   const locationData = location.state?.locationData as LocationData | undefined;
   const orderId = location.state?.orderId;
   const totalAmount = location.state?.totalAmount || getTotalPrice();
+  
+  // For debugging
+  console.log("Payment page received - Location data:", locationData);
+  console.log("Payment page received - Order ID:", orderId);
+  console.log("Payment page received - Total amount:", totalAmount);
   
   const deliveryPerson = {
     name: "Rahul Kumar",
@@ -54,7 +60,7 @@ const Payment = () => {
   }, [fetchCart]);
 
   useEffect(() => {
-    // Check for empty cart
+    // Check for empty cart when not in order flow
     if (!isLoading && cart.length === 0 && !orderId && !totalAmount) {
       toast.error("Your cart is empty. Please add items before proceeding to payment.");
       navigate('/cart');
@@ -62,7 +68,7 @@ const Payment = () => {
     }
     
     // Check for location data
-    if (!isLoading && !locationData && !orderId) {
+    if (!isLoading && !locationData) {
       toast.error("Please enter your delivery details first.");
       navigate('/location');
       return;
