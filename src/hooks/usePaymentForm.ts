@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from "sonner";
@@ -121,6 +122,7 @@ export function usePaymentForm(orderId: string | number | null, locationData: Lo
       const timer = setTimeout(async () => {
         try {
           if (orderId) {
+            // Convert orderId to a number and validate it
             const orderIdNumber = typeof orderId === 'string' ? parseInt(orderId, 10) : orderId;
             
             if (isNaN(Number(orderIdNumber))) {
