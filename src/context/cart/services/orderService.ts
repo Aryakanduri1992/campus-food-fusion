@@ -34,8 +34,8 @@ export const placeOrder = async (
       return total + (item.foodItem.price * item.quantity);
     }, 0);
     
-    // Call the create_new_order RPC function
-    const { data, error } = await supabase.rpc<CreateOrderResponse>(
+    // Call the create_new_order RPC function with proper type parameters
+    const { data, error } = await supabase.rpc<CreateOrderResponse, CreateOrderParams>(
       'create_new_order', 
       { 
         user_id_param: userId,
