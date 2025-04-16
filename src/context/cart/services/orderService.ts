@@ -3,7 +3,7 @@ import { CartItem } from '../types';
 import { supabase } from '@/integrations/supabase/client';
 import { 
   clearCartFromLocalStorage
-} from './services/cartStorageService';
+} from '../cartStorageService';
 
 // Define the parameters for the create_new_order RPC function
 interface CreateOrderParams {
@@ -35,7 +35,7 @@ export const placeOrder = async (
     }, 0);
     
     // Call the create_new_order RPC function
-    const { data, error } = await supabase.rpc(
+    const { data, error } = await supabase.rpc<CreateOrderResponse>(
       'create_new_order', 
       { 
         user_id_param: userId,
@@ -53,9 +53,7 @@ export const placeOrder = async (
       throw new Error('No order was created');
     }
     
-    // Cast the response data to our expected type and extract the ID
-    const responseData = data as unknown as CreateOrderResponse;
-    const orderId = responseData.id;
+    const orderId = data.id;
     
     if (typeof orderId !== 'number') {
       throw new Error('Invalid order ID returned');
@@ -65,7 +63,7 @@ export const placeOrder = async (
     try {
       // Use another RPC function to bypass RLS for order items
       const { error: itemsError } = await supabase.rpc(
-        'create_order_items',
+        'create_order_items' as any,
         {
           order_id_param: orderId,
           items_json: JSON.stringify(cart.map(item => ({
