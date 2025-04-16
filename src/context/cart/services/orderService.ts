@@ -28,12 +28,14 @@ export const placeOrder = async (
       return total + (item.foodItem.price * item.quantity);
     }, 0);
     
-    // Use any type for the RPC function since TypeScript doesn't know about our custom function
-    const { data, error } = await (supabase
-      .rpc('create_new_order', { 
+    // We need to use a type assertion to handle the custom RPC function
+    const { data, error } = await supabase.rpc(
+      'create_new_order' as any, 
+      { 
         user_id_param: userId,
         total_price_param: totalPrice
-      }) as any);
+      }
+    );
       
     if (error) {
       console.error('Order creation error:', error);

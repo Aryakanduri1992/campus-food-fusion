@@ -309,6 +309,10 @@ export type Database = {
         }
         Returns: undefined
       }
+      create_new_order: {
+        Args: { user_id_param: string; total_price_param: number }
+        Returns: Json
+      }
       has_role: {
         Args: {
           _user_id: string
