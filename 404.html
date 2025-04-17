@@ -6,31 +6,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Campus Food Fusion</title>
     <script>
-      // Single Page Apps for GitHub Pages
-      // MIT License
-      // https://github.com/rafgraph/spa-github-pages
-      (function(l) {
-        if (l.search[1] === '/' ) {
-          var decoded = l.search.slice(1).split('&').map(function(s) { 
-            return s.replace(/~and~/g, '&')
-          }).join('?');
-          window.history.replaceState(null, null,
-              l.pathname.slice(0, -1) + decoded + l.hash
-          );
-        }
-      }(window.location))
-    </script>
-    <script type="text/javascript">
-      // Single-page application routing fix for GitHub Pages
-      const pathSegmentsToKeep = 1;
-      const location = window.location;
-      const repo = '/campus-food-fusion';
-      
-      const l = window.location;
-      if (l.pathname.split('/')[1] === 'campus-food-fusion') {
-        const route = '/' + l.pathname.split('/').slice(2).join('/');
-        window.location.replace(`${repo}/#${route}`);
-      }
+      // Simple redirect to the main app with the hash router
+      window.location.href = '/campus-food-fusion/#' + window.location.pathname.replace('/campus-food-fusion', '');
     </script>
   </head>
   <body>
