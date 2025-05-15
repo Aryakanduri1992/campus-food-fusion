@@ -1,12 +1,15 @@
 
-export interface DeliveryPartner {
-  id: string;
-  email: string;
-  created_at: string;
-  partner_name?: string;
-  phone_number?: string;
-}
+import { DeliveryPartner } from '../owner/types';
 
 export interface UserRoleManagerProps {
-  onRoleAssigned?: () => void;
+  onRoleAssigned: () => void;
+}
+
+export interface PartnerFormProps {
+  onRoleAssigned: (partner: DeliveryPartner) => void;
+}
+
+export interface PartnersTableProps {
+  partners: DeliveryPartner[];
+  loading: boolean;
 }

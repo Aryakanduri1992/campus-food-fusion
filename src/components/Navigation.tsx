@@ -46,6 +46,11 @@ const Navigation: React.FC = () => {
     }
   };
 
+  const handleLoginClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    navigate('/auth');
+  };
+
   return (
     <nav className="sticky top-0 z-10 bg-rv-navy text-white shadow-md">
       <div className="container mx-auto px-4">
@@ -111,13 +116,14 @@ const Navigation: React.FC = () => {
                 <span>Logout</span>
               </Button>
             ) : (
-              <Link 
-                to="/auth" 
+              <Button 
+                variant="ghost" 
+                onClick={handleLoginClick}
                 className={`flex items-center space-x-2 ${isActive('/auth') ? 'text-rv-gold' : 'hover:text-rv-gold'}`}
               >
                 <LogIn size={20} />
                 <span>Login</span>
-              </Link>
+              </Button>
             )}
           </div>
 
@@ -172,10 +178,13 @@ const Navigation: React.FC = () => {
                 <span className="text-xs">Logout</span>
               </button>
             ) : (
-              <Link to="/auth" className={`flex flex-col items-center ${isActive('/auth') ? 'text-rv-gold' : ''}`}>
+              <button
+                onClick={handleLoginClick}
+                className={`flex flex-col items-center ${isActive('/auth') ? 'text-rv-gold' : ''}`}
+              >
                 <LogIn size={20} />
                 <span className="text-xs">Login</span>
-              </Link>
+              </button>
             )}
           </div>
         </div>
