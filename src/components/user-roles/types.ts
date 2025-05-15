@@ -13,3 +13,6 @@ export interface PartnersTableProps {
   partners: DeliveryPartner[];
   loading: boolean;
 }
+
+// Re-export DeliveryPartner so it's available to other modules
+export { DeliveryPartner };

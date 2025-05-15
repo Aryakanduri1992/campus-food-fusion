@@ -3,8 +3,8 @@
 import React from 'react';
 import { UserRoleManager as UserRoleManagerComponent } from './user-roles/UserRoleManager';
 
-const UserRoleManager = () => {
-  return <UserRoleManagerComponent />;
+const UserRoleManager = ({ onRoleAssigned }) => {
+  return <UserRoleManagerComponent onRoleAssigned={onRoleAssigned} />;
 };
 
 export default UserRoleManager;
