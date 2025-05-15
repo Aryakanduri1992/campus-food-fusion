@@ -1,10 +1,31 @@
+
 import React, { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import PartnersTable from './PartnersTable';
 import PartnerForm from './PartnerForm';
+import { UserRoleManagerProps } from './types';
+import { useDeliveryPartners } from './hooks/useDeliveryPartners';
+import { DeliveryPartner } from './types';
 
-export const UserRoleManager: React.FC = () => {
+export const UserRoleManager: React.FC<UserRoleManagerProps> = ({ onRoleAssigned }) => {
   const [activeTab, setActiveTab] = useState("partners");
+  const { 
+    loadingPartners, 
+    deliveryPartners, 
+    setDeliveryPartners,
+    fetchDeliveryPartners 
+  } = useDeliveryPartners();
+
+  const handleRoleAssigned = (newPartner: DeliveryPartner) => {
+    // Add to local state for immediate UI update
+    setDeliveryPartners(prev => [newPartner, ...prev]);
+    
+    // Refresh the list to get the actual data
+    setTimeout(fetchDeliveryPartners, 1000);
+    
+    // Call the parent callback if provided
+    if (onRoleAssigned) onRoleAssigned();
+  };
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -18,8 +39,11 @@ export const UserRoleManager: React.FC = () => {
         
         <TabsContent value="partners" className="space-y-4">
           <h2 className="text-xl font-semibold">Manage Delivery Partners</h2>
-          <PartnerForm />
-          <PartnersTable />
+          <PartnerForm onRoleAssigned={handleRoleAssigned} />
+          <PartnersTable 
+            partners={deliveryPartners} 
+            loading={loadingPartners} 
+          />
         </TabsContent>
         
         <TabsContent value="assign" className="space-y-4">
