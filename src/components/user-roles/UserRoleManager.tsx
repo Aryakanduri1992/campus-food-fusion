@@ -1,60 +1,36 @@
-
 import React, { useState } from 'react';
-import { 
-  Card, 
-  CardContent, 
-  CardDescription, 
-  CardHeader, 
-  CardTitle 
-} from '@/components/ui/card';
-import { useDeliveryPartners } from './hooks/useDeliveryPartners';
-import PartnerForm from './PartnerForm';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import PartnersTable from './PartnersTable';
-import { DeliveryPartner, UserRoleManagerProps } from './types';
+import PartnerForm from './PartnerForm';
 
-const UserRoleManager: React.FC<UserRoleManagerProps> = ({ onRoleAssigned }) => {
-  const { 
-    loadingPartners, 
-    deliveryPartners, 
-    setDeliveryPartners,
-    fetchDeliveryPartners 
-  } = useDeliveryPartners();
-
-  const handleRoleAssigned = (newPartner: DeliveryPartner) => {
-    // Add to local state for immediate UI update
-    setDeliveryPartners(prev => [newPartner, ...prev]);
-    
-    // Refresh the list to get the actual data
-    setTimeout(fetchDeliveryPartners, 1000);
-    
-    // Call the parent callback if provided
-    if (onRoleAssigned) onRoleAssigned();
-  };
+export const UserRoleManager: React.FC = () => {
+  const [activeTab, setActiveTab] = useState("partners");
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Manage Delivery Partner Roles</CardTitle>
-        <CardDescription>Assign delivery partner role to users</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-6">
-          <PartnerForm onRoleAssigned={handleRoleAssigned} />
-          
-          <div>
-            <h3 className="text-lg font-medium mb-2">Assigned Delivery Partners</h3>
-            <PartnersTable 
-              partners={deliveryPartners} 
-              loading={loadingPartners} 
-            />
-          </div>
-          
-          <p className="text-sm text-gray-500">
-            This will assign the delivery partner role to an existing user account. The user must already be registered in the system.
+    <div className="container mx-auto px-4 py-8">
+      <h1 className="text-2xl font-bold mb-6">User Role Management</h1>
+      
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <TabsList className="mb-6">
+          <TabsTrigger value="partners">Delivery Partners</TabsTrigger>
+          <TabsTrigger value="assign">Assign Roles</TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="partners" className="space-y-4">
+          <h2 className="text-xl font-semibold">Manage Delivery Partners</h2>
+          <PartnerForm />
+          <PartnersTable />
+        </TabsContent>
+        
+        <TabsContent value="assign" className="space-y-4">
+          <h2 className="text-xl font-semibold">Assign User Roles</h2>
+          <p className="text-gray-600">
+            Use this section to change roles for existing users.
           </p>
-        </div>
-      </CardContent>
-    </Card>
+          {/* Role assignment interface will go here */}
+        </TabsContent>
+      </Tabs>
+    </div>
   );
 };
 
